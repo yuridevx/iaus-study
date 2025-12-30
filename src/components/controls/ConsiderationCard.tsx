@@ -10,6 +10,7 @@ interface ConsiderationCardProps {
   onInputChange: (value: number) => void;
   onCurveChange: (updates: Partial<CurveConfig>) => void;
   onLoadSavedCurve: (curveId: string) => void;
+  onEditInFullEditor: () => void;
   onRemove: () => void;
 }
 
@@ -25,6 +26,7 @@ export const ConsiderationCard = ({
   onInputChange,
   onCurveChange,
   onLoadSavedCurve,
+  onEditInFullEditor,
   onRemove,
 }: ConsiderationCardProps) => {
   const [expanded, setExpanded] = useState(false);
@@ -163,16 +165,24 @@ export const ConsiderationCard = ({
             />
           </div>
 
-          {/* Invert */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={curve.invert}
-              onChange={() => onCurveChange({ invert: !curve.invert })}
-              className="w-4 h-4 accent-blue-500"
-            />
-            <span className="text-sm text-slate-600">Invert</span>
-          </label>
+          {/* Invert & Edit link */}
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={curve.invert}
+                onChange={() => onCurveChange({ invert: !curve.invert })}
+                className="w-4 h-4 accent-blue-500"
+              />
+              <span className="text-sm text-slate-600">Invert</span>
+            </label>
+            <button
+              onClick={onEditInFullEditor}
+              className="text-xs text-blue-500 hover:text-blue-700 hover:underline"
+            >
+              Edit in full editor
+            </button>
+          </div>
 
           {/* Input slider */}
           <div>

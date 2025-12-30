@@ -2,9 +2,10 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../layout/PageContainer';
 import { useIAUSStore } from '../../stores/iausStore';
-import type { CurveType } from '../../lib/types';
+import type { CurveType, Consideration } from '../../lib/types';
 import { curveNames, generateCurvePoints } from '../../lib/curves';
 import { defaultParams } from '../../lib/types';
+import { presetScenarios } from '../../lib/presets';
 
 const curveTypes: CurveType[] = [
   'linear', 'polynomial', 'exponential', 'logarithmic',
@@ -50,9 +51,11 @@ const CurvePreview = ({ type, onClick }: CurvePreviewProps) => {
   );
 };
 
+const generateId = () => Math.random().toString(36).substring(2, 9);
+
 export const PresetsPage = () => {
   const navigate = useNavigate();
-  const { setCurrentCurve } = useIAUSStore();
+  const { setCurrentCurve, setConsiderations } = useIAUSStore();
 
   const handleSelectCurve = (type: CurveType) => {
     setCurrentCurve({
@@ -63,6 +66,17 @@ export const PresetsPage = () => {
       invert: false,
     });
     navigate('/');
+  };
+
+  const handleLoadScenarioAction = (considerations: Consideration[]) => {
+    // Clone with new IDs to avoid conflicts
+    const clonedConsiderations = considerations.map((c) => ({
+      ...c,
+      id: generateId(),
+      curve: { ...c.curve, id: generateId() },
+    }));
+    setConsiderations(clonedConsiderations);
+    navigate('/multi');
   };
 
   return (
@@ -77,6 +91,40 @@ export const PresetsPage = () => {
                 type={type}
                 onClick={() => handleSelectCurve(type)}
               />
+            ))}
+          </div>
+        </div>
+
+        {/* Scenario Presets */}
+        <div>
+          <h2 className="text-sm font-medium text-slate-500 mb-4">Scenarios</h2>
+          <div className="space-y-4">
+            {presetScenarios.map((scenario) => (
+              <div key={scenario.id} className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
+                <div className="font-medium text-slate-700 mb-1">{scenario.name}</div>
+                <div className="text-xs text-slate-500 mb-4">{scenario.description}</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {scenario.actions.map((action) => (
+                    <div
+                      key={action.id}
+                      onClick={() => handleLoadScenarioAction(action.considerations)}
+                      className="bg-slate-50 rounded-lg p-3 cursor-pointer hover:bg-blue-50 hover:border-blue-200 border border-slate-200 transition-all"
+                    >
+                      <div className="text-sm font-medium text-slate-700 mb-1">{action.name}</div>
+                      <div className="text-xs text-slate-500">
+                        {action.considerations.length} consideration{action.considerations.length !== 1 ? 's' : ''}
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {action.considerations.map((c) => (
+                          <span key={c.id} className="text-xs bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                            {c.curve.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>

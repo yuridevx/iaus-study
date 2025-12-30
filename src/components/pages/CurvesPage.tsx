@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { PageContainer } from '../layout/PageContainer';
 import { CurveGraph } from '../graphs/CurveGraph';
 import { InputOutputBars } from '../graphs/InputOutputBars';
@@ -7,9 +8,14 @@ import { CurveTypeSelector } from '../controls/CurveTypeSelector';
 import { SavedCurveCard } from '../controls/SavedCurveCard';
 import { useIAUSStore } from '../../stores/iausStore';
 import { curveParamConfig, evaluateCurve } from '../../lib/curves';
+import { generateSingleCurveCode } from '../../lib/codeGen';
 import type { CurveParams } from '../../lib/types';
 
 export const CurvesPage = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const returnTo = searchParams.get('returnTo');
+
   const {
     currentCurve,
     testInput,
@@ -23,7 +29,23 @@ export const CurvesPage = () => {
     deleteCurve,
     loadCurve,
     resetCurrentCurve,
+    libraryConfig,
   } = useIAUSStore();
+
+  const [copied, setCopied] = useState(false);
+
+  const handleBack = () => {
+    if (returnTo === 'multi') {
+      navigate('/multi');
+    }
+  };
+
+  const handleCopyCode = async () => {
+    const code = generateSingleCurveCode(currentCurve, libraryConfig);
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const outputValue = useMemo(
     () => evaluateCurve(currentCurve.type, testInput, currentCurve.params, currentCurve.invert),
@@ -37,6 +59,14 @@ export const CurvesPage = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {returnTo === 'multi' && (
+            <button
+              onClick={handleBack}
+              className="px-3 py-2 text-sm text-blue-500 border border-blue-300 rounded-md hover:bg-blue-50 flex items-center gap-1"
+            >
+              <span>&larr;</span> Back to Multi
+            </button>
+          )}
           <input
             type="text"
             value={currentCurve.name}
@@ -45,6 +75,13 @@ export const CurvesPage = () => {
             placeholder="Curve name..."
           />
           <div className="flex gap-2">
+            <button
+              onClick={handleCopyCode}
+              className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50"
+              title="Copy C# code"
+            >
+              {copied ? "✓" : "📋 C#"}
+            </button>
             <button
               onClick={() => saveCurve(currentCurve)}
               className="px-3 py-2 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600"

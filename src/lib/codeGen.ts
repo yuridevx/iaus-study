@@ -381,3 +381,32 @@ export const generateSingleCurveCode = (curve: CurveConfig, config: LibraryConfi
 var ${curve.name.replace(/[^a-zA-Z0-9]/g, '')}Curve = new ${structName}(${params});
 ${T} score = ${curve.name.replace(/[^a-zA-Z0-9]/g, '')}Curve.Evaluate(input);`;
 };
+
+import type { Consideration } from './types';
+
+export const generateScorerCode = (considerations: Consideration[], config: LibraryConfig): string => {
+  const T = config.numericType === 'float' ? 'float' : 'double';
+  const suffix = config.numericType === 'float' ? 'f' : '';
+
+  if (considerations.length === 0) {
+    return '// No considerations defined';
+  }
+
+  let code = '// IAUS Scorer\n';
+
+  // Generate curve instantiations
+  considerations.forEach((c, i) => {
+    const curveLine = generateSingleCurveCode(c.curve, config).split('\n')[1];
+    code += curveLine.replace('Curve = new', `Curve${i} = new`) + '\n';
+  });
+
+  code += `\n${T} score = 1${suffix};\n`;
+
+  considerations.forEach((_, i) => {
+    code += `score = IAUSScorer.ScoreWithTermination(score, curve${i}.Evaluate(input${i}));\n`;
+  });
+
+  code += `score = IAUSScorer.ApplyCompensation(score, ${considerations.length});`;
+
+  return code;
+};

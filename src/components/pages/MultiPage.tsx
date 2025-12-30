@@ -1,17 +1,21 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../layout/PageContainer';
 import { ConsiderationCard } from '../controls/ConsiderationCard';
 import { CombinedCurveGraph } from '../graphs/CombinedCurveGraph';
 import { ContributionBars } from '../graphs/ContributionBars';
 import { useIAUSStore } from '../../stores/iausStore';
+import type { CurveConfig } from '../../lib/types';
 import {
   calculateRawScore,
   calculateCompensatedScore,
   getModificationFactor,
   getCompensationBoost,
 } from '../../lib/compensation';
+import { generateSingleCurveCode, generateScorerCode } from '../../lib/codeGen';
 
 export const MultiPage = () => {
+  const navigate = useNavigate();
   const {
     considerations,
     savedCurves,
@@ -20,7 +24,33 @@ export const MultiPage = () => {
     updateConsiderationInput,
     updateConsiderationCurve,
     loadSavedCurveToConsideration,
+    setCurrentCurve,
+    libraryConfig,
   } = useIAUSStore();
+
+  const handleEditInFullEditor = (curve: CurveConfig) => {
+    setCurrentCurve({ ...curve });
+    navigate('/?returnTo=multi');
+  };
+
+  const [copiedCurves, setCopiedCurves] = useState(false);
+  const [copiedScorer, setCopiedScorer] = useState(false);
+
+  const handleCopyCurves = async () => {
+    const code = considerations
+      .map((c) => generateSingleCurveCode(c.curve, libraryConfig))
+      .join('\n\n');
+    await navigator.clipboard.writeText(code);
+    setCopiedCurves(true);
+    setTimeout(() => setCopiedCurves(false), 2000);
+  };
+
+  const handleCopyScorer = async () => {
+    const code = generateScorerCode(considerations, libraryConfig);
+    await navigator.clipboard.writeText(code);
+    setCopiedScorer(true);
+    setTimeout(() => setCopiedScorer(false), 2000);
+  };
 
   const rawScore = useMemo(
     () => calculateRawScore(considerations),
@@ -43,6 +73,24 @@ export const MultiPage = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-medium text-slate-500">Considerations</h2>
             <div className="flex gap-2">
+              {considerations.length > 0 && (
+                <>
+                  <button
+                    onClick={handleCopyCurves}
+                    className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50"
+                    title="Copy all curves as C#"
+                  >
+                    {copiedCurves ? '✓' : '📋 Curves'}
+                  </button>
+                  <button
+                    onClick={handleCopyScorer}
+                    className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50"
+                    title="Copy IAUS scorer as C#"
+                  >
+                    {copiedScorer ? '✓' : '📋 IAUS'}
+                  </button>
+                </>
+              )}
               <button
                 onClick={() => addConsideration()}
                 className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -81,6 +129,7 @@ export const MultiPage = () => {
                 onInputChange={(v) => updateConsiderationInput(c.id, v)}
                 onCurveChange={(updates) => updateConsiderationCurve(c.id, updates)}
                 onLoadSavedCurve={(curveId) => loadSavedCurveToConsideration(c.id, curveId)}
+                onEditInFullEditor={() => handleEditInFullEditor(c.curve)}
                 onRemove={() => removeConsideration(c.id)}
               />
             ))}

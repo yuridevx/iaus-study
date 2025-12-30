@@ -42,6 +42,7 @@ interface IAUSState {
   updateConsiderationInput: (id: string, value: number) => void;
   updateConsiderationCurve: (id: string, updates: Partial<CurveConfig>) => void;
   loadSavedCurveToConsideration: (considerationId: string, curveId: string) => void;
+  setConsiderations: (considerations: Consideration[]) => void;
   updateLibraryConfig: (config: Partial<LibraryConfig>) => void;
   resetCurrentCurve: () => void;
 }
@@ -150,13 +151,15 @@ export const useIAUSStore = create<IAUSState>()(
         if (!savedCurve) return {};
         return {
           considerations: state.considerations.map(c =>
-            c.id === considerationId 
+            c.id === considerationId
               ? { ...c, curve: { ...savedCurve, id: generateId() } }
               : c
           ),
         };
       }),
-      
+
+      setConsiderations: (considerations) => set({ considerations }),
+
       updateLibraryConfig: (config) => set((state) => ({
         libraryConfig: { ...state.libraryConfig, ...config },
       })),
