@@ -161,6 +161,21 @@ export const curveNames: Record<CurveType, string> = {
   step: 'Step',
 };
 
+export const curveFormulas: Record<CurveType, string> = {
+  linear: 'y = mx + b',
+  polynomial: 'y = x^n',
+  exponential: 'y = (base^x - 1) / (base - 1)',
+  logarithmic: 'y = log_base(1 + x(base-1))',
+  logistic: 'y = 1 / (1 + e^(-k(x - mid)))',
+  logit: 'y = log(x / (1 - x))',
+  smoothstep: 'y = 3x² - 2x³',
+  smootherstep: 'y = 6x⁵ - 15x⁴ + 10x³',
+  sine: 'y = (sin(freq·πx + off) + 1) / 2',
+  cosine: 'y = 1 - cos(freq·(π/2)x)',
+  gaussian: 'y = e^(-(x-μ)² / 2σ²)',
+  step: 'y = x > t ? 1 : 0',
+};
+
 export const curveParamConfig: Record<CurveType, { key: keyof CurveParams; label: string; min: number; max: number; step: number }[]> = {
   linear: [
     { key: 'slope', label: 'm', min: -5, max: 5, step: 0.1 },
