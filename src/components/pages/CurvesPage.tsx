@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { InlineMath } from 'react-katex';
+import 'katex/dist/katex.min.css';
 import { PageContainer } from '../layout/PageContainer';
 import { CurveGraph } from '../graphs/CurveGraph';
 import { InputOutputBars } from '../graphs/InputOutputBars';
@@ -118,13 +120,13 @@ export const CurvesPage = () => {
                 value={currentCurve.type}
                 onChange={updateCurrentCurveType}
               />
-              <div className="mt-3 pt-3 border-t border-slate-100 space-y-1">
-                <code className="text-xs text-slate-400 font-mono block">
-                  {curveFormulas[currentCurve.type]}
-                </code>
-                <code className="text-sm text-slate-700 font-mono block">
-                  {getFormulaWithValues(currentCurve.type, currentCurve.params)}
-                </code>
+              <div className="mt-3 pt-3 border-t border-slate-100 space-y-2">
+                <div className="text-slate-400 text-sm">
+                  <InlineMath math={curveFormulas[currentCurve.type]} />
+                </div>
+                <div className="text-slate-700">
+                  <InlineMath math={getFormulaWithValues(currentCurve.type, currentCurve.params)} />
+                </div>
               </div>
             </div>
 

@@ -164,16 +164,16 @@ export const curveNames: Record<CurveType, string> = {
 export const curveFormulas: Record<CurveType, string> = {
   linear: 'y = mx + b',
   polynomial: 'y = x^n',
-  exponential: 'y = (base^x - 1) / (base - 1)',
-  logarithmic: 'y = log_base(1 + x(base-1))',
-  logistic: 'y = 1 / (1 + e^(-k(x - mid)))',
-  logit: 'y = log(x / (1 - x))',
-  smoothstep: 'y = 3x² - 2x³',
-  smootherstep: 'y = 6x⁵ - 15x⁴ + 10x³',
-  sine: 'y = (sin(freq·πx + off) + 1) / 2',
-  cosine: 'y = 1 - cos(freq·(π/2)x)',
-  gaussian: 'y = e^(-(x-μ)² / 2σ²)',
-  step: 'y = x > t ? 1 : 0',
+  exponential: 'y = \\frac{base^x - 1}{base - 1}',
+  logarithmic: 'y = \\log_{base}(1 + x(base-1))',
+  logistic: 'y = \\frac{1}{1 + e^{-k(x - mid)}}',
+  logit: 'y = \\log\\left(\\frac{x}{1 - x}\\right)',
+  smoothstep: 'y = 3x^2 - 2x^3',
+  smootherstep: 'y = 6x^5 - 15x^4 + 10x^3',
+  sine: 'y = \\frac{\\sin(freq \\cdot \\pi x + off) + 1}{2}',
+  cosine: 'y = 1 - \\cos\\left(freq \\cdot \\frac{\\pi}{2} x\\right)',
+  gaussian: 'y = e^{-\\frac{(x-\\mu)^2}{2\\sigma^2}}',
+  step: 'y = \\begin{cases} 1 & x > t \\\\ 0 & x \\leq t \\end{cases}',
 };
 
 const fmt = (n: number): string => {
@@ -191,38 +191,42 @@ export const getFormulaWithValues = (type: CurveType, params: CurveParams): stri
       return `y = ${fmt(m)}x - ${fmt(Math.abs(b))}`;
     }
     case 'polynomial':
-      return `y = x^${fmt(params.exponent ?? 2)}`;
-    case 'exponential':
-      return `y = (${fmt(params.base ?? 2)}^x - 1) / ${fmt((params.base ?? 2) - 1)}`;
-    case 'logarithmic':
-      return `y = log_${fmt(params.base ?? 10)}(1 + x·${fmt((params.base ?? 10) - 1)})`;
+      return `y = x^{${fmt(params.exponent ?? 2)}}`;
+    case 'exponential': {
+      const base = params.base ?? 2;
+      return `y = \\frac{${fmt(base)}^x - 1}{${fmt(base - 1)}}`;
+    }
+    case 'logarithmic': {
+      const base = params.base ?? 10;
+      return `y = \\log_{${fmt(base)}}(1 + x \\cdot ${fmt(base - 1)})`;
+    }
     case 'logistic': {
       const k = params.steepness ?? 10;
       const mid = params.midpoint ?? 0.5;
-      return `y = 1 / (1 + e^(-${fmt(k)}(x - ${fmt(mid)})))`;
+      return `y = \\frac{1}{1 + e^{-${fmt(k)}(x - ${fmt(mid)})}}`;
     }
     case 'logit':
-      return `y = log_${fmt(params.base ?? Math.E)}(x / (1 - x))`;
+      return `y = \\log\\left(\\frac{x}{1 - x}\\right)`;
     case 'smoothstep':
-      return 'y = 3x² - 2x³';
+      return 'y = 3x^2 - 2x^3';
     case 'smootherstep':
-      return 'y = 6x⁵ - 15x⁴ + 10x³';
+      return 'y = 6x^5 - 15x^4 + 10x^3';
     case 'sine': {
       const freq = params.frequency ?? 1;
       const off = params.offset ?? 0;
-      if (off === 0) return `y = (sin(${fmt(freq)}πx) + 1) / 2`;
-      if (off > 0) return `y = (sin(${fmt(freq)}πx + ${fmt(off)}) + 1) / 2`;
-      return `y = (sin(${fmt(freq)}πx - ${fmt(Math.abs(off))}) + 1) / 2`;
+      if (off === 0) return `y = \\frac{\\sin(${fmt(freq)}\\pi x) + 1}{2}`;
+      if (off > 0) return `y = \\frac{\\sin(${fmt(freq)}\\pi x + ${fmt(off)}) + 1}{2}`;
+      return `y = \\frac{\\sin(${fmt(freq)}\\pi x - ${fmt(Math.abs(off))}) + 1}{2}`;
     }
     case 'cosine':
-      return `y = 1 - cos(${fmt(params.frequency ?? 1)}·(π/2)x)`;
+      return `y = 1 - \\cos\\left(${fmt(params.frequency ?? 1)} \\cdot \\frac{\\pi}{2} x\\right)`;
     case 'gaussian': {
       const mean = params.mean ?? 0.5;
       const std = params.stdDev ?? 0.2;
-      return `y = e^(-(x-${fmt(mean)})² / ${fmt(2 * std * std)})`;
+      return `y = e^{-\\frac{(x-${fmt(mean)})^2}{${fmt(2 * std * std)}}}`;
     }
     case 'step':
-      return `y = x > ${fmt(params.threshold ?? 0.5)} ? 1 : 0`;
+      return `y = \\begin{cases} 1 & x > ${fmt(params.threshold ?? 0.5)} \\\\ 0 & x \\leq ${fmt(params.threshold ?? 0.5)} \\end{cases}`;
     default:
       return 'y = x';
   }
