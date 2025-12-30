@@ -10,7 +10,7 @@ import { presetScenarios } from '../../lib/presets';
 const curveTypes: CurveType[] = [
   'linear', 'polynomial', 'exponential', 'logarithmic',
   'logistic', 'logit', 'smoothstep', 'smootherstep',
-  'sine', 'cosine', 'gaussian', 'step',
+  'sine', 'cosine', 'gaussian', 'step', 'piecewiseLinear',
 ];
 
 interface CurvePreviewProps {

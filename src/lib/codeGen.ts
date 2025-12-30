@@ -196,6 +196,30 @@ namespace UtilityAI
 
 `;
 
+  // Logit Curve
+  code += `${xmlDoc('Logit curve: y = log(x / (1-x)) normalized to 0-1')}    public readonly struct LogitCurve${config.includeInterface ? ' : ICurve' : ''}
+    {
+        public readonly ${T} Base, XShift, YShift;
+        public readonly bool Invert;
+
+        public LogitCurve(${T} @base = 2.718${suffix}, ${T} xShift = 0${suffix}, ${T} yShift = 0${suffix}, bool invert = false)
+        {
+            Base = @base; XShift = xShift; YShift = yShift; Invert = invert;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ${T} Evaluate(${T} x)
+        {
+            x = CurveHelpers.Clamp01(x - XShift);
+            x = x < 0.001${suffix} ? 0.001${suffix} : (x > 0.999${suffix} ? 0.999${suffix} : x);
+            ${T} raw = ${MathLog}(x / (1${suffix} - x)) / ${MathLog}(Base);
+            ${T} result = CurveHelpers.Clamp01((raw + 6${suffix}) / 12${suffix} + YShift);
+            return Invert ? 1${suffix} - result : result;
+        }
+    }
+
+`;
+
   // Gaussian Curve
   code += `${xmlDoc('Gaussian (bell) curve: y = e^(-(x-μ)²/2σ²)')}    public readonly struct GaussianCurve${config.includeInterface ? ' : ICurve' : ''}
     {
@@ -285,6 +309,48 @@ namespace UtilityAI
 
 `;
 
+  // Piecewise Linear Curve
+  code += `${xmlDoc('Piecewise linear curve: interpolates between defined points')}    public readonly struct PiecewiseLinearCurve${config.includeInterface ? ' : ICurve' : ''}
+    {
+        public readonly ${T}[] PointsX, PointsY;
+        public readonly ${T} XShift, YShift;
+        public readonly bool Invert;
+
+        public PiecewiseLinearCurve(${T}[] pointsX, ${T}[] pointsY, ${T} xShift = 0${suffix}, ${T} yShift = 0${suffix}, bool invert = false)
+        {
+            PointsX = pointsX; PointsY = pointsY; XShift = xShift; YShift = yShift; Invert = invert;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ${T} Evaluate(${T} x)
+        {
+            x -= XShift;
+            if (PointsX == null || PointsX.Length == 0) return Invert ? 1${suffix} : 0${suffix};
+            if (PointsX.Length == 1) return CurveHelpers.Clamp01(PointsY[0] + YShift);
+
+            if (x <= PointsX[0]) return CurveHelpers.Clamp01((Invert ? 1${suffix} - PointsY[0] : PointsY[0]) + YShift);
+            if (x >= PointsX[PointsX.Length - 1])
+            {
+                ${T} lastY = PointsY[PointsY.Length - 1];
+                return CurveHelpers.Clamp01((Invert ? 1${suffix} - lastY : lastY) + YShift);
+            }
+
+            for (int i = 0; i < PointsX.Length - 1; i++)
+            {
+                if (x >= PointsX[i] && x <= PointsX[i + 1])
+                {
+                    ${T} t = (x - PointsX[i]) / (PointsX[i + 1] - PointsX[i]);
+                    ${T} result = PointsY[i] + t * (PointsY[i + 1] - PointsY[i]);
+                    result = CurveHelpers.Clamp01(result + YShift);
+                    return Invert ? 1${suffix} - result : result;
+                }
+            }
+            return Invert ? 1${suffix} : 0${suffix};
+        }
+    }
+
+`;
+
   // IAUS Scorer
   code += `${xmlDoc('IAUS Utility Scoring helpers')}    public static class IAUSScorer
     {
@@ -341,6 +407,10 @@ export const generateSingleCurveCode = (curve: CurveConfig, config: LibraryConfi
       structName = 'LogisticCurve';
       params = `steepness: ${formatParam(curve.params.steepness, 10)}, midpoint: ${formatParam(curve.params.midpoint, 0.5)}`;
       break;
+    case 'logit':
+      structName = 'LogitCurve';
+      params = `@base: ${formatParam(curve.params.base, Math.E)}`;
+      break;
     case 'smoothstep':
       structName = 'SmoothstepCurve';
       params = '';
@@ -365,6 +435,14 @@ export const generateSingleCurveCode = (curve: CurveConfig, config: LibraryConfi
       structName = 'CosineCurve';
       params = `frequency: ${formatParam(curve.params.frequency, 1)}`;
       break;
+    case 'piecewiseLinear': {
+      structName = 'PiecewiseLinearCurve';
+      const pts = curve.params.points ?? [{ x: 0, y: 0 }, { x: 1, y: 1 }];
+      const xArr = `new ${T}[] { ${pts.map(p => formatParam(p.x, 0)).join(', ')} }`;
+      const yArr = `new ${T}[] { ${pts.map(p => formatParam(p.y, 0)).join(', ')} }`;
+      params = `pointsX: ${xArr}, pointsY: ${yArr}`;
+      break;
+    }
     default:
       structName = 'LinearCurve';
       params = '';

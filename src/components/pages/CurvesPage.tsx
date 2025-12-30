@@ -11,7 +11,7 @@ import { SavedCurveCard } from '../controls/SavedCurveCard';
 import { useIAUSStore } from '../../stores/iausStore';
 import { curveParamConfig, curveFormulas, getFormulaWithValues, evaluateCurve } from '../../lib/curves';
 import { generateSingleCurveCode } from '../../lib/codeGen';
-import type { CurveParams } from '../../lib/types';
+import type { CurveParams, CurvePoint } from '../../lib/types';
 
 export const CurvesPage = () => {
   const [searchParams] = useSearchParams();
@@ -145,6 +145,70 @@ export const CurvesPage = () => {
                   }
                 />
               ))}
+
+              {/* Piecewise Linear Points Editor */}
+              {currentCurve.type === 'piecewiseLinear' && (
+                <div className="space-y-2">
+                  <div className="text-xs text-slate-500 font-medium">Points</div>
+                  {(currentCurve.params.points ?? []).map((point: CurvePoint, idx: number) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400 w-4">{idx + 1}</span>
+                      <input
+                        type="number"
+                        value={point.x}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        onChange={(e) => {
+                          const newPoints = [...(currentCurve.params.points ?? [])];
+                          newPoints[idx] = { ...newPoints[idx], x: parseFloat(e.target.value) || 0 };
+                          updateCurrentCurveParams({ points: newPoints });
+                        }}
+                        className="w-16 px-2 py-1 text-xs border border-slate-200 rounded"
+                        placeholder="x"
+                      />
+                      <span className="text-xs text-slate-400">,</span>
+                      <input
+                        type="number"
+                        value={point.y}
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        onChange={(e) => {
+                          const newPoints = [...(currentCurve.params.points ?? [])];
+                          newPoints[idx] = { ...newPoints[idx], y: parseFloat(e.target.value) || 0 };
+                          updateCurrentCurveParams({ points: newPoints });
+                        }}
+                        className="w-16 px-2 py-1 text-xs border border-slate-200 rounded"
+                        placeholder="y"
+                      />
+                      <button
+                        onClick={() => {
+                          const newPoints = (currentCurve.params.points ?? []).filter((_: CurvePoint, i: number) => i !== idx);
+                          updateCurrentCurveParams({ points: newPoints.length > 0 ? newPoints : [{ x: 0, y: 0 }] });
+                        }}
+                        className="text-red-400 hover:text-red-600 text-xs px-1"
+                        title="Remove point"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      const points = currentCurve.params.points ?? [];
+                      const lastPoint = points[points.length - 1] ?? { x: 0, y: 0 };
+                      const newX = Math.min(1, lastPoint.x + 0.2);
+                      updateCurrentCurveParams({
+                        points: [...points, { x: newX, y: lastPoint.y }],
+                      });
+                    }}
+                    className="text-xs text-blue-500 hover:text-blue-700"
+                  >
+                    + Add Point
+                  </button>
+                </div>
+              )}
 
               {/* X/Y Shift */}
               <ParameterSlider

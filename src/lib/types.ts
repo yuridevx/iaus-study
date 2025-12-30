@@ -11,7 +11,8 @@ export type CurveType =
   | 'sine'
   | 'cosine'
   | 'gaussian'
-  | 'step';
+  | 'step'
+  | 'piecewiseLinear';
 
 // Base curve configuration
 export interface CurveConfig {
@@ -20,6 +21,12 @@ export interface CurveConfig {
   type: CurveType;
   params: CurveParams;
   invert: boolean;
+}
+
+// Point for piecewise linear curves
+export interface CurvePoint {
+  x: number;
+  y: number;
 }
 
 // Parameters for each curve type
@@ -42,6 +49,8 @@ export interface CurveParams {
   // Sine/Cosine
   frequency?: number;
   offset?: number;
+  // Piecewise Linear: list of (x,y) points
+  points?: CurvePoint[];
   // X/Y shift (universal)
   xShift?: number;
   yShift?: number;
@@ -61,6 +70,7 @@ export const defaultParams: Record<CurveType, CurveParams> = {
   cosine: { frequency: 1, offset: 0, xShift: 0, yShift: 0 },
   gaussian: { mean: 0.5, stdDev: 0.2, xShift: 0, yShift: 0 },
   step: { threshold: 0.5, xShift: 0, yShift: 0 },
+  piecewiseLinear: { points: [{ x: 0, y: 0 }, { x: 0.5, y: 0.8 }, { x: 1, y: 1 }], xShift: 0, yShift: 0 },
 };
 
 // Consideration in multi-consideration scoring
