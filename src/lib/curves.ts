@@ -176,6 +176,58 @@ export const curveFormulas: Record<CurveType, string> = {
   step: 'y = x > t ? 1 : 0',
 };
 
+const fmt = (n: number): string => {
+  if (Number.isInteger(n)) return n.toString();
+  return n.toFixed(2).replace(/\.?0+$/, '');
+};
+
+export const getFormulaWithValues = (type: CurveType, params: CurveParams): string => {
+  switch (type) {
+    case 'linear': {
+      const m = params.slope ?? 1;
+      const b = params.intercept ?? 0;
+      if (b === 0) return `y = ${fmt(m)}x`;
+      if (b > 0) return `y = ${fmt(m)}x + ${fmt(b)}`;
+      return `y = ${fmt(m)}x - ${fmt(Math.abs(b))}`;
+    }
+    case 'polynomial':
+      return `y = x^${fmt(params.exponent ?? 2)}`;
+    case 'exponential':
+      return `y = (${fmt(params.base ?? 2)}^x - 1) / ${fmt((params.base ?? 2) - 1)}`;
+    case 'logarithmic':
+      return `y = log_${fmt(params.base ?? 10)}(1 + x·${fmt((params.base ?? 10) - 1)})`;
+    case 'logistic': {
+      const k = params.steepness ?? 10;
+      const mid = params.midpoint ?? 0.5;
+      return `y = 1 / (1 + e^(-${fmt(k)}(x - ${fmt(mid)})))`;
+    }
+    case 'logit':
+      return `y = log_${fmt(params.base ?? Math.E)}(x / (1 - x))`;
+    case 'smoothstep':
+      return 'y = 3x² - 2x³';
+    case 'smootherstep':
+      return 'y = 6x⁵ - 15x⁴ + 10x³';
+    case 'sine': {
+      const freq = params.frequency ?? 1;
+      const off = params.offset ?? 0;
+      if (off === 0) return `y = (sin(${fmt(freq)}πx) + 1) / 2`;
+      if (off > 0) return `y = (sin(${fmt(freq)}πx + ${fmt(off)}) + 1) / 2`;
+      return `y = (sin(${fmt(freq)}πx - ${fmt(Math.abs(off))}) + 1) / 2`;
+    }
+    case 'cosine':
+      return `y = 1 - cos(${fmt(params.frequency ?? 1)}·(π/2)x)`;
+    case 'gaussian': {
+      const mean = params.mean ?? 0.5;
+      const std = params.stdDev ?? 0.2;
+      return `y = e^(-(x-${fmt(mean)})² / ${fmt(2 * std * std)})`;
+    }
+    case 'step':
+      return `y = x > ${fmt(params.threshold ?? 0.5)} ? 1 : 0`;
+    default:
+      return 'y = x';
+  }
+};
+
 export const curveParamConfig: Record<CurveType, { key: keyof CurveParams; label: string; min: number; max: number; step: number }[]> = {
   linear: [
     { key: 'slope', label: 'm', min: -5, max: 5, step: 0.1 },

@@ -7,7 +7,7 @@ import { ParameterSlider } from '../controls/ParameterSlider';
 import { CurveTypeSelector } from '../controls/CurveTypeSelector';
 import { SavedCurveCard } from '../controls/SavedCurveCard';
 import { useIAUSStore } from '../../stores/iausStore';
-import { curveParamConfig, curveFormulas, evaluateCurve } from '../../lib/curves';
+import { curveParamConfig, curveFormulas, getFormulaWithValues, evaluateCurve } from '../../lib/curves';
 import { generateSingleCurveCode } from '../../lib/codeGen';
 import type { CurveParams } from '../../lib/types';
 
@@ -118,9 +118,12 @@ export const CurvesPage = () => {
                 value={currentCurve.type}
                 onChange={updateCurrentCurveType}
               />
-              <div className="mt-3 pt-3 border-t border-slate-100">
-                <code className="text-sm text-slate-600 font-mono">
+              <div className="mt-3 pt-3 border-t border-slate-100 space-y-1">
+                <code className="text-xs text-slate-400 font-mono block">
                   {curveFormulas[currentCurve.type]}
+                </code>
+                <code className="text-sm text-slate-700 font-mono block">
+                  {getFormulaWithValues(currentCurve.type, currentCurve.params)}
                 </code>
               </div>
             </div>
