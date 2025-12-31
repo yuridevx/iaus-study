@@ -13,6 +13,17 @@ const createDefaultCurve = (name?: string): CurveConfig => ({
   invert: false,
 });
 
+// Validate and filter out invalid considerations
+const validateConsiderations = (considerations: Consideration[]): Consideration[] =>
+  considerations.filter(c => c && c.curve && c.curve.type && c.curve.params);
+
+// Validate actions (filter out considerations with null curves)
+const validateActions = (actions: Action[]): Action[] =>
+  actions.map(a => ({
+    ...a,
+    considerations: validateConsiderations(a.considerations || []),
+  })).filter(a => a && a.id);
+
 const createDefaultConsideration = (curve?: CurveConfig): Consideration => ({
   id: generateId(),
   curve: curve ? { ...curve, id: generateId() } : createDefaultCurve(),
@@ -287,21 +298,30 @@ export const useIAUSStore = create<IAUSState>()(
         try {
           const data = JSON.parse(json);
           if (!data.name || !Array.isArray(data.actions)) return false;
-          const scenario: Scenario = {
+          const actions = data.actions.map((a: Action) => ({
             id: generateId(),
-            name: data.name,
-            actions: data.actions.map((a: Action) => ({
-              id: generateId(),
-              name: a.name || 'Action',
-              considerations: (a.considerations || []).map((c: Consideration) => ({
+            name: a.name || 'Action',
+            considerations: (a.considerations || [])
+              .filter((c: Consideration) => c && c.curve && c.curve.type)
+              .map((c: Consideration) => ({
                 id: generateId(),
                 inputValue: c.inputValue ?? 0.5,
                 curve: {
-                  ...c.curve,
                   id: generateId(),
+                  name: c.curve.name || 'Curve',
+                  type: c.curve.type,
+                  params: c.curve.params || { ...defaultParams[c.curve.type] },
+                  invert: c.curve.invert ?? false,
                 },
               })),
-            })),
+          })).filter((a: Action) => a.considerations.length > 0 || data.actions.length === 1);
+
+          if (actions.length === 0) return false;
+
+          const scenario: Scenario = {
+            id: generateId(),
+            name: data.name,
+            actions,
             createdAt: Date.now(),
             updatedAt: Date.now(),
           };
@@ -445,6 +465,35 @@ export const useIAUSStore = create<IAUSState>()(
         currentScenario: state.currentScenario,
         activeActionId: state.activeActionId,
       }),
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        // Validate scenarios on load
+        if (state.scenarios) {
+          state.scenarios = state.scenarios
+            .filter(s => s && s.id && s.name)
+            .map(s => ({
+              ...s,
+              actions: validateActions(s.actions || []),
+            }));
+        }
+        // Validate current scenario
+        if (state.currentScenario) {
+          if (!state.currentScenario.id || !state.currentScenario.name) {
+            state.currentScenario = null;
+            state.activeActionId = null;
+          } else {
+            state.currentScenario.actions = validateActions(state.currentScenario.actions || []);
+            // Validate activeActionId
+            if (state.activeActionId && !state.currentScenario.actions.find(a => a.id === state.activeActionId)) {
+              state.activeActionId = state.currentScenario.actions[0]?.id || null;
+            }
+          }
+        }
+        // Validate saved curves
+        if (state.savedCurves) {
+          state.savedCurves = state.savedCurves.filter(c => c && c.id && c.type && c.params);
+        }
+      },
     }
   )
 );

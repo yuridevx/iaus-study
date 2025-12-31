@@ -23,11 +23,16 @@ import { evaluateCurve } from '../../lib/curves';
 import { applyCompensation } from '../../lib/compensation';
 import { useIAUSStore } from '../../stores/iausStore';
 
+// Check if curve is valid
+const isValidCurve = (curve: CurveConfig | null | undefined): curve is CurveConfig =>
+  !!(curve && curve.type && curve.params);
+
 const calculateActionScore = (considerations: Consideration[]): { raw: number; comp: number } => {
-  if (considerations.length === 0) return { raw: 0, comp: 0 };
+  const validConsiderations = considerations.filter(c => isValidCurve(c?.curve));
+  if (validConsiderations.length === 0) return { raw: 0, comp: 0 };
 
   let raw = 1;
-  for (const c of considerations) {
+  for (const c of validConsiderations) {
     const val = evaluateCurve(c.curve.type, c.inputValue, c.curve.params, c.curve.invert);
     if (val <= 0) { raw = 0; break; }
     raw *= val;
@@ -35,13 +40,14 @@ const calculateActionScore = (considerations: Consideration[]): { raw: number; c
 
   return {
     raw,
-    comp: applyCompensation(raw, considerations.length),
+    comp: applyCompensation(raw, validConsiderations.length),
   };
 };
 
 // Mini curve preview component
-const MiniCurvePreview = ({ curve }: { curve: CurveConfig }) => {
+const MiniCurvePreview = ({ curve }: { curve: CurveConfig | null | undefined }) => {
   const points = useMemo(() => {
+    if (!isValidCurve(curve)) return [];
     const pts = [];
     for (let i = 0; i <= 20; i++) {
       const x = i / 20;
@@ -50,6 +56,14 @@ const MiniCurvePreview = ({ curve }: { curve: CurveConfig }) => {
     }
     return pts;
   }, [curve]);
+
+  if (!isValidCurve(curve)) {
+    return (
+      <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
+        <span className="text-red-400 text-xs">?</span>
+      </div>
+    );
+  }
 
   return (
     <div className="w-8 h-8 bg-slate-100 rounded overflow-hidden">
@@ -179,6 +193,14 @@ export const SimulatorPage = () => {
                   {/* Considerations */}
                   <div className="space-y-1.5">
                     {action.considerations.map((c) => {
+                      if (!isValidCurve(c?.curve)) {
+                        return (
+                          <div key={c.id} className="flex items-center gap-1.5 text-red-400 text-xs">
+                            <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">?</div>
+                            <span>Invalid curve</span>
+                          </div>
+                        );
+                      }
                       const output = evaluateCurve(c.curve.type, c.inputValue, c.curve.params, c.curve.invert);
                       return (
                         <div key={c.id} className="flex items-center gap-1.5">

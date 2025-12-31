@@ -32,6 +32,22 @@ export const ConsiderationCard = ({
   const [expanded, setExpanded] = useState(false);
   const { curve, inputValue } = consideration;
 
+  // Handle null/invalid curve gracefully
+  if (!curve || !curve.type || !curve.params) {
+    return (
+      <div className="bg-red-50 rounded-lg border border-red-200 p-3 flex items-center justify-between">
+        <span className="text-sm text-red-600">Invalid curve</span>
+        <button
+          onClick={onRemove}
+          className="p-1 text-red-400 hover:text-red-600"
+          title="Remove"
+        >
+          ×
+        </button>
+      </div>
+    );
+  }
+
   const outputValue = useMemo(
     () => evaluateCurve(curve.type, inputValue, curve.params, curve.invert),
     [curve.type, inputValue, curve.params, curve.invert]
