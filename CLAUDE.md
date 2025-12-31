@@ -5,10 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## UI Guidelines
 
 - **Auto-save everything** - No manual save buttons; persist changes immediately on every edit
-- **In-place editing** - Click/double-click to edit names directly; no separate edit buttons or modals
+- **In-place editing** - Single-click to edit names directly; no separate edit buttons or modals
 - **Icons over labels** - Use symbols (⧉ ↑ ↓ ×) instead of text labels; rely on tooltips for clarity
 - **Minimize clicks** - Flatten dropdown menus into visible icon buttons when possible
 - **No confirmation dialogs** - Trust the user; undo via browser refresh or re-import if needed
+- **Mobile-first touch targets** - Minimum 40-48px for buttons (`p-2.5` to `p-3`); use `rounded-lg` for larger elements
+- **Responsive controls** - Stack controls vertically on mobile; use `overflow-x-auto scrollbar-hide` for horizontal scrolling
 
 ## Project Overview
 
