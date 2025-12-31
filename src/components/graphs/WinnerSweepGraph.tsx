@@ -8,10 +8,48 @@ import {
   ResponsiveContainer,
   Legend,
   ReferenceLine,
+  Tooltip,
 } from 'recharts';
 import type { Action } from '../../lib/types';
 import { evaluateCurve } from '../../lib/curves';
 import { applyCompensation } from '../../lib/compensation';
+
+interface TooltipPayload {
+  dataKey: string;
+  value: number;
+  color: string;
+}
+
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: number;
+}) => {
+  if (!active || !payload?.length) return null;
+
+  // Sort by value descending (highest score first)
+  const sorted = [...payload].sort((a, b) => b.value - a.value);
+
+  return (
+    <div className="bg-slate-800 text-white text-xs px-2 py-1.5 rounded shadow-lg">
+      <div className="text-slate-400 mb-1">x: {label?.toFixed(3)}</div>
+      {sorted.map((entry, idx) => (
+        <div
+          key={entry.dataKey}
+          style={{ color: entry.color }}
+          className={idx === 0 ? 'font-medium' : ''}
+        >
+          {entry.value.toFixed(3)} — {entry.dataKey}
+          {idx === 0 && ' ★'}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 interface WinnerSweepGraphProps {
   actions: Action[];
@@ -95,6 +133,10 @@ export const WinnerSweepGraph = ({
               width={30}
             />
             <Legend wrapperStyle={{ fontSize: '10px' }} />
+            <Tooltip
+              content={<CustomTooltip />}
+              cursor={{ stroke: '#64748b', strokeDasharray: '3 3' }}
+            />
             <ReferenceLine
               x={currentValue}
               stroke="#94a3b8"
@@ -109,6 +151,7 @@ export const WinnerSweepGraph = ({
                 stroke={COLORS[idx % COLORS.length]}
                 strokeWidth={action.id === sweepActionId ? 2 : 1}
                 dot={false}
+                activeDot={{ r: 4, strokeWidth: 1 }}
               />
             ))}
           </LineChart>

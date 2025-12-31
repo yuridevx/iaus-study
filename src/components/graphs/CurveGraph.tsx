@@ -8,9 +8,35 @@ import {
   ReferenceLine,
   ResponsiveContainer,
   ReferenceDot,
+  Tooltip,
 } from 'recharts';
 import type { CurveConfig } from '../../lib/types';
 import { generateCurvePoints, evaluateCurve } from '../../lib/curves';
+
+interface TooltipPayload {
+  payload: { x: number; y: number };
+}
+
+const CustomTooltip = ({
+  active,
+  payload,
+  curveName,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  curveName: string;
+}) => {
+  if (!active || !payload?.length) return null;
+  const { x, y } = payload[0].payload;
+  return (
+    <div className="bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg">
+      <div className="text-slate-400">x: {x.toFixed(3)}</div>
+      <div className="text-blue-400 font-medium">
+        {y.toFixed(3)} — {curveName}
+      </div>
+    </div>
+  );
+};
 
 interface CurveGraphProps {
   curve: CurveConfig;
@@ -64,6 +90,10 @@ export const CurveGraph = ({ curve, testInput, onTestInputChange }: CurveGraphPr
             fontSize={12}
             stroke="#64748b"
           />
+          <Tooltip
+            content={<CustomTooltip curveName={curve.name || curve.type} />}
+            cursor={{ stroke: '#64748b', strokeDasharray: '3 3' }}
+          />
           <ReferenceLine x={testInput} stroke="#94a3b8" strokeDasharray="5 5" />
           <ReferenceLine y={outputValue} stroke="#94a3b8" strokeDasharray="5 5" />
           <Line
@@ -72,6 +102,7 @@ export const CurveGraph = ({ curve, testInput, onTestInputChange }: CurveGraphPr
             stroke="#3b82f6"
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 5, fill: '#3b82f6', stroke: '#1d4ed8', strokeWidth: 2 }}
             isAnimationActive={false}
           />
           <ReferenceDot

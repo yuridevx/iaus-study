@@ -7,16 +7,63 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Legend,
+  Tooltip,
 } from 'recharts';
 import type { Consideration } from '../../lib/types';
 import { evaluateCurve } from '../../lib/curves';
 import { applyCompensation } from '../../lib/compensation';
 
-interface CombinedCurveGraphProps {
-  considerations: Consideration[];
+interface TooltipPayload {
+  dataKey: string;
+  value: number;
+  color: string;
 }
 
 const COLORS = ['#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899'];
+
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+  considerations,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: number;
+  considerations: Consideration[];
+}) => {
+  if (!active || !payload?.length) return null;
+
+  const getName = (dataKey: string) => {
+    if (dataKey === 'raw') return 'Raw';
+    if (dataKey === 'comp') return 'Compensated';
+    const idx = parseInt(dataKey.slice(1));
+    return considerations[idx]?.curve.name || dataKey;
+  };
+
+  // Sort: comp and raw first, then considerations
+  const sorted = [...payload].sort((a, b) => {
+    const order = { comp: 0, raw: 1 };
+    const aOrder = order[a.dataKey as keyof typeof order] ?? 2;
+    const bOrder = order[b.dataKey as keyof typeof order] ?? 2;
+    return aOrder - bOrder;
+  });
+
+  return (
+    <div className="bg-slate-800 text-white text-xs px-2 py-1.5 rounded shadow-lg">
+      <div className="text-slate-400 mb-1">x: {label?.toFixed(3)}</div>
+      {sorted.map((entry) => (
+        <div key={entry.dataKey} style={{ color: entry.color }}>
+          {entry.value.toFixed(3)} — {getName(entry.dataKey)}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+interface CombinedCurveGraphProps {
+  considerations: Consideration[];
+}
 
 export const CombinedCurveGraph = ({ considerations }: CombinedCurveGraphProps) => {
   const data = useMemo(() => {
@@ -76,6 +123,10 @@ export const CombinedCurveGraph = ({ considerations }: CombinedCurveGraphProps) 
               return considerations[idx]?.curve.name || value;
             }}
           />
+          <Tooltip
+            content={<CustomTooltip considerations={considerations} />}
+            cursor={{ stroke: '#64748b', strokeDasharray: '3 3' }}
+          />
 
           {/* Individual curves */}
           {considerations.map((c, idx) => (
@@ -87,6 +138,7 @@ export const CombinedCurveGraph = ({ considerations }: CombinedCurveGraphProps) 
               strokeWidth={1}
               strokeDasharray="4 2"
               dot={false}
+              activeDot={{ r: 4, strokeWidth: 1 }}
               isAnimationActive={false}
             />
           ))}
@@ -98,6 +150,7 @@ export const CombinedCurveGraph = ({ considerations }: CombinedCurveGraphProps) 
             stroke="#f97316"
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 5, strokeWidth: 2 }}
             isAnimationActive={false}
           />
 
@@ -108,6 +161,7 @@ export const CombinedCurveGraph = ({ considerations }: CombinedCurveGraphProps) 
             stroke="#22c55e"
             strokeWidth={2}
             dot={false}
+            activeDot={{ r: 5, strokeWidth: 2 }}
             isAnimationActive={false}
           />
         </LineChart>
