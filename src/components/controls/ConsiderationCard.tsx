@@ -183,20 +183,21 @@ export const ConsiderationCard = ({
 
           {/* Invert & Edit link */}
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer" title="Invert output (1-y)">
               <input
                 type="checkbox"
                 checked={curve.invert}
                 onChange={() => onCurveChange({ invert: !curve.invert })}
                 className="w-4 h-4 accent-blue-500"
               />
-              <span className="text-sm text-slate-600">Invert</span>
+              <span className="text-sm text-slate-600">⟲</span>
             </label>
             <button
               onClick={onEditInFullEditor}
-              className="text-xs text-blue-500 hover:text-blue-700 hover:underline"
+              className="p-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+              title="Edit in full editor"
             >
-              Edit in full editor
+              ↗
             </button>
           </div>
 

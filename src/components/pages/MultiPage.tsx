@@ -48,6 +48,7 @@ export const MultiPage = () => {
   const [editName, setEditName] = useState('');
   const [copiedCurves, setCopiedCurves] = useState(false);
   const [copiedScorer, setCopiedScorer] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   const activeAction = currentScenario?.actions.find(a => a.id === activeActionId);
   const considerations = activeAction?.considerations || [];
@@ -91,7 +92,10 @@ export const MultiPage = () => {
     const reader = new FileReader();
     reader.onload = () => {
       const success = importFromJSON(reader.result as string);
-      if (!success) alert('Invalid scenario file');
+      if (!success) {
+        setImportError('Invalid scenario file');
+        setTimeout(() => setImportError(null), 3000);
+      }
     };
     reader.readAsText(file);
     e.target.value = '';
@@ -124,16 +128,18 @@ export const MultiPage = () => {
           <div className="flex gap-3">
             <button
               onClick={newScenario}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
+              className="p-2.5 bg-blue-500 text-white rounded hover:bg-blue-600"
+              title="New scenario"
             >
-              <span>+</span> New
+              +
             </button>
             <div className="relative">
               <button
                 onClick={() => setShowScenarioList(!showScenarioList)}
-                className="px-4 py-2 border border-slate-300 rounded hover:bg-slate-50 flex items-center gap-2"
+                className="p-2.5 border border-slate-300 rounded hover:bg-slate-50"
+                title="Load preset"
               >
-                <span>↓</span> Preset
+                ↓
               </button>
               {showScenarioList && (
                 <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-10 min-w-40">
@@ -153,9 +159,10 @@ export const MultiPage = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowScenarioList(!showScenarioList)}
-                  className="px-4 py-2 border border-slate-300 rounded hover:bg-slate-50 flex items-center gap-2"
+                  className="p-2.5 border border-slate-300 rounded hover:bg-slate-50"
+                  title="Open saved scenario"
                 >
-                  <span>📁</span> Open
+                  📁
                 </button>
                 {showScenarioList && (
                   <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-10 min-w-40">
@@ -182,10 +189,14 @@ export const MultiPage = () => {
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="mt-4 text-sm text-blue-500 hover:underline"
+            className="mt-4 p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+            title="Import from file"
           >
-            Import from file...
+            ↑
           </button>
+          {importError && (
+            <div className="mt-2 text-sm text-red-500">{importError}</div>
+          )}
         </div>
       </PageContainer>
     );
@@ -367,9 +378,10 @@ export const MultiPage = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => addConsideration()}
-                className="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="p-1.5 bg-blue-500 text-white rounded hover:bg-blue-600"
+                title="Add consideration"
               >
-                + New
+                +
               </button>
               {savedCurves.length > 0 && (
                 <select

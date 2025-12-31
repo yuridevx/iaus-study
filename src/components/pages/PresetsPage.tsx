@@ -103,9 +103,10 @@ export const PresetsPage = () => {
                   </div>
                   <button
                     onClick={() => handleLoadScenario(scenario.id)}
-                    className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    title="Import preset"
                   >
-                    ↓ Import
+                    ↓
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-2">
