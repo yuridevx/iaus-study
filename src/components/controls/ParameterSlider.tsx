@@ -25,7 +25,7 @@ export const ParameterSlider = ({
         step={step}
         value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+        className="flex-1 cursor-pointer"
       />
       <span className="text-sm font-mono text-slate-800 w-14 text-right">
         {value.toFixed(2)}

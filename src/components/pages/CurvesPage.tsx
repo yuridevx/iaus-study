@@ -125,7 +125,7 @@ export const CurvesPage = () => {
                   <InlineMath math={curveFormulas[currentCurve.type]} />
                 </div>
                 <div className="text-slate-700">
-                  <InlineMath math={getFormulaWithValues(currentCurve.type, currentCurve.params)} />
+                  <InlineMath math={getFormulaWithValues(currentCurve.type, currentCurve.params, currentCurve.invert)} />
                 </div>
               </div>
             </div>

@@ -210,60 +210,145 @@ const fmt = (n: number): string => {
   return n.toFixed(2).replace(/\.?0+$/, '');
 };
 
-export const getFormulaWithValues = (type: CurveType, params: CurveParams): string => {
+// Format x variable with shift applied
+const fmtX = (xShift: number): string => {
+  if (xShift === 0) return 'x';
+  if (xShift > 0) return `(x - ${fmt(xShift)})`;
+  return `(x + ${fmt(Math.abs(xShift))})`;
+};
+
+// Wrap formula with transformations (yShift, invert)
+const wrapFormula = (core: string, yShift: number, invert: boolean): string => {
+  let result = core;
+
+  // Add yShift
+  if (yShift !== 0) {
+    if (yShift > 0) {
+      result = `${result} + ${fmt(yShift)}`;
+    } else {
+      result = `${result} - ${fmt(Math.abs(yShift))}`;
+    }
+  }
+
+  // Wrap with invert
+  if (invert) {
+    // Use parentheses if there's a yShift or complex expression
+    if (yShift !== 0) {
+      result = `1 - (${result})`;
+    } else {
+      result = `1 - ${result}`;
+    }
+  }
+
+  return `y = ${result}`;
+};
+
+export const getFormulaWithValues = (type: CurveType, params: CurveParams, invert: boolean = false): string => {
+  const xShift = params.xShift ?? 0;
+  const yShift = params.yShift ?? 0;
+  const x = fmtX(xShift);
+
+  let core: string;
+
   switch (type) {
     case 'linear': {
       const m = params.slope ?? 1;
       const b = params.intercept ?? 0;
-      if (b === 0) return `y = ${fmt(m)}x`;
-      if (b > 0) return `y = ${fmt(m)}x + ${fmt(b)}`;
-      return `y = ${fmt(m)}x - ${fmt(Math.abs(b))}`;
+      if (b === 0) {
+        core = `${fmt(m)}${x}`;
+      } else if (b > 0) {
+        core = `${fmt(m)}${x} + ${fmt(b)}`;
+      } else {
+        core = `${fmt(m)}${x} - ${fmt(Math.abs(b))}`;
+      }
+      break;
     }
     case 'polynomial':
-      return `y = x^{${fmt(params.exponent ?? 2)}}`;
+      core = `${x}^{${fmt(params.exponent ?? 2)}}`;
+      break;
     case 'exponential': {
       const base = params.base ?? 2;
-      return `y = \\frac{${fmt(base)}^x - 1}{${fmt(base - 1)}}`;
+      core = `\\frac{${fmt(base)}^{${x}} - 1}{${fmt(base - 1)}}`;
+      break;
     }
     case 'logarithmic': {
       const base = params.base ?? 10;
-      return `y = \\log_{${fmt(base)}}(1 + x \\cdot ${fmt(base - 1)})`;
+      core = `\\log_{${fmt(base)}}(1 + ${x} \\cdot ${fmt(base - 1)})`;
+      break;
     }
     case 'logistic': {
       const k = params.steepness ?? 10;
       const mid = params.midpoint ?? 0.5;
-      return `y = \\frac{1}{1 + e^{-${fmt(k)}(x - ${fmt(mid)})}}`;
+      core = `\\frac{1}{1 + e^{-${fmt(k)}(${x} - ${fmt(mid)})}}`;
+      break;
     }
     case 'logit':
-      return `y = \\log\\left(\\frac{x}{1 - x}\\right)`;
+      core = `\\log\\left(\\frac{${x}}{1 - ${x}}\\right)`;
+      break;
     case 'smoothstep':
-      return 'y = 3x^2 - 2x^3';
+      core = `3${x}^2 - 2${x}^3`;
+      break;
     case 'smootherstep':
-      return 'y = 6x^5 - 15x^4 + 10x^3';
+      core = `6${x}^5 - 15${x}^4 + 10${x}^3`;
+      break;
     case 'sine': {
       const freq = params.frequency ?? 1;
       const off = params.offset ?? 0;
-      if (off === 0) return `y = \\frac{\\sin(${fmt(freq)}\\pi x) + 1}{2}`;
-      if (off > 0) return `y = \\frac{\\sin(${fmt(freq)}\\pi x + ${fmt(off)}) + 1}{2}`;
-      return `y = \\frac{\\sin(${fmt(freq)}\\pi x - ${fmt(Math.abs(off))}) + 1}{2}`;
+      if (off === 0) {
+        core = `\\frac{\\sin(${fmt(freq)}\\pi ${x}) + 1}{2}`;
+      } else if (off > 0) {
+        core = `\\frac{\\sin(${fmt(freq)}\\pi ${x} + ${fmt(off)}) + 1}{2}`;
+      } else {
+        core = `\\frac{\\sin(${fmt(freq)}\\pi ${x} - ${fmt(Math.abs(off))}) + 1}{2}`;
+      }
+      break;
     }
     case 'cosine':
-      return `y = 1 - \\cos\\left(${fmt(params.frequency ?? 1)} \\cdot \\frac{\\pi}{2} x\\right)`;
+      core = `1 - \\cos\\left(${fmt(params.frequency ?? 1)} \\cdot \\frac{\\pi}{2} ${x}\\right)`;
+      break;
     case 'gaussian': {
       const mean = params.mean ?? 0.5;
       const std = params.stdDev ?? 0.2;
-      return `y = e^{-\\frac{(x-${fmt(mean)})^2}{${fmt(2 * std * std)}}}`;
+      core = `e^{-\\frac{(${x}-${fmt(mean)})^2}{${fmt(2 * std * std)}}}`;
+      break;
     }
     case 'step':
-      return `y = \\begin{cases} 1 & x > ${fmt(params.threshold ?? 0.5)} \\\\ 0 & x \\leq ${fmt(params.threshold ?? 0.5)} \\end{cases}`;
+      // Step function has special formatting
+      if (invert) {
+        const threshold = params.threshold ?? 0.5;
+        let formula = `\\begin{cases} 0 & ${x} > ${fmt(threshold)} \\\\ 1 & ${x} \\leq ${fmt(threshold)} \\end{cases}`;
+        if (yShift !== 0) {
+          if (yShift > 0) formula += ` + ${fmt(yShift)}`;
+          else formula += ` - ${fmt(Math.abs(yShift))}`;
+        }
+        return `y = ${formula}`;
+      }
+      {
+        const threshold = params.threshold ?? 0.5;
+        let formula = `\\begin{cases} 1 & ${x} > ${fmt(threshold)} \\\\ 0 & ${x} \\leq ${fmt(threshold)} \\end{cases}`;
+        if (yShift !== 0) {
+          if (yShift > 0) formula += ` + ${fmt(yShift)}`;
+          else formula += ` - ${fmt(Math.abs(yShift))}`;
+        }
+        return `y = ${formula}`;
+      }
     case 'piecewiseLinear': {
       const pts = params.points ?? [{ x: 0, y: 0 }, { x: 1, y: 1 }];
       const ptsStr = pts.map(p => `(${fmt(p.x)},${fmt(p.y)})`).join(' \\to ');
-      return `y: ${ptsStr}`;
+      let result = ptsStr;
+      if (xShift !== 0) result = `x \\mapsto ${fmtX(xShift)}, ${result}`;
+      if (yShift !== 0) {
+        if (yShift > 0) result += ` + ${fmt(yShift)}`;
+        else result += ` - ${fmt(Math.abs(yShift))}`;
+      }
+      if (invert) result = `1 - (${result})`;
+      return `y: ${result}`;
     }
     default:
-      return 'y = x';
+      core = x;
   }
+
+  return wrapFormula(core, yShift, invert);
 };
 
 export const curveParamConfig: Record<CurveType, { key: keyof CurveParams; label: string; min: number; max: number; step: number }[]> = {

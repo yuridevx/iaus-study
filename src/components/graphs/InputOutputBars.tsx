@@ -19,7 +19,7 @@ export const InputOutputBars = ({ input, output, onInputChange }: InputOutputBar
           step={0.01}
           value={input}
           onChange={(e) => onInputChange?.(parseFloat(e.target.value))}
-          className="w-full h-2 bg-slate-300 rounded-lg appearance-none cursor-pointer accent-blue-500"
+          className="w-full cursor-pointer"
         />
       </div>
       <div className="space-y-1">
