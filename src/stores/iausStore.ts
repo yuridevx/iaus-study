@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CurveConfig, CurveType, Consideration, Action, LibraryConfig } from '../lib/types';
+import type { CurveConfig, CurveType, Consideration, Action, LibraryConfig, PresetScenario } from '../lib/types';
 import { defaultParams } from '../lib/types';
+import { combatScenario } from '../lib/presets';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
@@ -27,25 +28,51 @@ interface IAUSState {
   actions: Action[];
   scenarioInputs: Record<string, number>;
   libraryConfig: LibraryConfig;
-  
+
+  // Current curve methods
   setCurrentCurve: (curve: CurveConfig) => void;
   updateCurrentCurveType: (type: CurveType) => void;
   updateCurrentCurveParams: (params: Partial<CurveConfig['params']>) => void;
   updateCurrentCurveName: (name: string) => void;
   toggleCurrentCurveInvert: () => void;
   setTestInput: (value: number) => void;
+  resetCurrentCurve: () => void;
+
+  // Saved curves methods
   saveCurve: (curve: CurveConfig) => void;
   deleteCurve: (id: string) => void;
   loadCurve: (id: string) => void;
+
+  // Multi page considerations methods
   addConsideration: (curve?: CurveConfig) => void;
   removeConsideration: (id: string) => void;
   updateConsiderationInput: (id: string, value: number) => void;
   updateConsiderationCurve: (id: string, updates: Partial<CurveConfig>) => void;
   loadSavedCurveToConsideration: (considerationId: string, curveId: string) => void;
   setConsiderations: (considerations: Consideration[]) => void;
+
+  // Action CRUD methods (Simulator)
+  addAction: (name: string) => void;
+  removeAction: (id: string) => void;
+  updateActionName: (id: string, name: string) => void;
+
+  // Consideration CRUD within actions (Simulator)
+  addConsiderationToAction: (actionId: string, curve?: CurveConfig) => void;
+  removeConsiderationFromAction: (actionId: string, considerationId: string) => void;
+  updateActionConsiderationInput: (actionId: string, considerationId: string, value: number) => void;
+  updateActionConsiderationCurve: (actionId: string, considerationId: string, updates: Partial<CurveConfig>) => void;
+
+  // Scenario management
+  loadScenario: (scenario: PresetScenario) => void;
+  resetScenario: () => void;
+
+  // Library config
   updateLibraryConfig: (config: Partial<LibraryConfig>) => void;
-  resetCurrentCurve: () => void;
 }
+
+// Deep clone actions to avoid mutation issues
+const cloneActions = (actions: Action[]): Action[] =>
+  JSON.parse(JSON.stringify(actions));
 
 export const useIAUSStore = create<IAUSState>()(
   persist(
@@ -54,7 +81,7 @@ export const useIAUSStore = create<IAUSState>()(
       testInput: 0.5,
       savedCurves: [],
       considerations: [createDefaultConsideration()],
-      actions: [],
+      actions: cloneActions(combatScenario.actions),
       scenarioInputs: {},
       libraryConfig: {
         numericType: 'float',
@@ -160,10 +187,84 @@ export const useIAUSStore = create<IAUSState>()(
 
       setConsiderations: (considerations) => set({ considerations }),
 
+      // Action CRUD methods (Simulator)
+      addAction: (name) => set((state) => ({
+        actions: [
+          ...state.actions,
+          {
+            id: generateId(),
+            name,
+            considerations: [createDefaultConsideration()],
+          },
+        ],
+      })),
+
+      removeAction: (id) => set((state) => ({
+        actions: state.actions.filter(a => a.id !== id),
+      })),
+
+      updateActionName: (id, name) => set((state) => ({
+        actions: state.actions.map(a =>
+          a.id === id ? { ...a, name } : a
+        ),
+      })),
+
+      // Consideration CRUD within actions
+      addConsiderationToAction: (actionId, curve) => set((state) => ({
+        actions: state.actions.map(a =>
+          a.id === actionId
+            ? { ...a, considerations: [...a.considerations, createDefaultConsideration(curve)] }
+            : a
+        ),
+      })),
+
+      removeConsiderationFromAction: (actionId, considerationId) => set((state) => ({
+        actions: state.actions.map(a =>
+          a.id === actionId
+            ? { ...a, considerations: a.considerations.filter(c => c.id !== considerationId) }
+            : a
+        ),
+      })),
+
+      updateActionConsiderationInput: (actionId, considerationId, value) => set((state) => ({
+        actions: state.actions.map(a =>
+          a.id === actionId
+            ? {
+                ...a,
+                considerations: a.considerations.map(c =>
+                  c.id === considerationId ? { ...c, inputValue: value } : c
+                ),
+              }
+            : a
+        ),
+      })),
+
+      updateActionConsiderationCurve: (actionId, considerationId, updates) => set((state) => ({
+        actions: state.actions.map(a =>
+          a.id === actionId
+            ? {
+                ...a,
+                considerations: a.considerations.map(c =>
+                  c.id === considerationId ? { ...c, curve: { ...c.curve, ...updates } } : c
+                ),
+              }
+            : a
+        ),
+      })),
+
+      // Scenario management
+      loadScenario: (scenario) => set({
+        actions: cloneActions(scenario.actions),
+      }),
+
+      resetScenario: () => set({
+        actions: cloneActions(combatScenario.actions),
+      }),
+
       updateLibraryConfig: (config) => set((state) => ({
         libraryConfig: { ...state.libraryConfig, ...config },
       })),
-      
+
       resetCurrentCurve: () => set({
         currentCurve: createDefaultCurve('New Curve'),
         testInput: 0.5,
@@ -174,6 +275,7 @@ export const useIAUSStore = create<IAUSState>()(
       partialize: (state) => ({
         savedCurves: state.savedCurves,
         libraryConfig: state.libraryConfig,
+        actions: state.actions,
       }),
     }
   )

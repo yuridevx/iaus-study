@@ -17,6 +17,8 @@ export const CurvesPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const returnTo = searchParams.get('returnTo');
+  const actionId = searchParams.get('actionId');
+  const considerationId = searchParams.get('considerationId');
 
   const {
     currentCurve,
@@ -32,12 +34,23 @@ export const CurvesPage = () => {
     loadCurve,
     resetCurrentCurve,
     libraryConfig,
+    updateActionConsiderationCurve,
+    updateConsiderationCurve,
   } = useIAUSStore();
 
   const [copied, setCopied] = useState(false);
 
   const handleBack = () => {
-    if (returnTo === 'multi') {
+    // Update the curve in the store before navigating back
+    if (returnTo === 'simulator' && actionId && considerationId) {
+      if (actionId === 'multi-page-sync') {
+        // Multi page uses different store method
+        updateConsiderationCurve(considerationId, currentCurve);
+      } else {
+        updateActionConsiderationCurve(actionId, considerationId, currentCurve);
+      }
+      navigate('/simulator');
+    } else if (returnTo === 'multi') {
       navigate('/multi');
     }
   };
@@ -61,12 +74,12 @@ export const CurvesPage = () => {
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          {returnTo === 'multi' && (
+          {(returnTo === 'multi' || returnTo === 'simulator') && (
             <button
               onClick={handleBack}
               className="px-3 py-2 text-sm text-blue-500 border border-blue-300 rounded-md hover:bg-blue-50 flex items-center gap-1"
             >
-              <span>&larr;</span> Back to Multi
+              <span>&larr;</span> {returnTo === 'simulator' ? 'Back to Simulator' : 'Back to Multi'}
             </button>
           )}
           <input
