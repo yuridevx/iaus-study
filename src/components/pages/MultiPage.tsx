@@ -128,7 +128,7 @@ export const MultiPage = () => {
           <div className="flex gap-3">
             <button
               onClick={newScenario}
-              className="p-2.5 bg-blue-500 text-white rounded hover:bg-blue-600"
+              className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-lg"
               title="New scenario"
             >
               +
@@ -136,18 +136,18 @@ export const MultiPage = () => {
             <div className="relative">
               <button
                 onClick={() => setShowScenarioList(!showScenarioList)}
-                className="p-2.5 border border-slate-300 rounded hover:bg-slate-50"
+                className="p-3 border border-slate-300 rounded-lg hover:bg-slate-50 text-lg"
                 title="Load preset"
               >
                 ↓
               </button>
               {showScenarioList && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-10 min-w-40">
+                <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 min-w-48">
                   {presetScenarios.map(p => (
                     <button
                       key={p.id}
                       onClick={() => { importPreset(p); setShowScenarioList(false); }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                      className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50"
                     >
                       {p.name}
                     </button>
@@ -159,18 +159,18 @@ export const MultiPage = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowScenarioList(!showScenarioList)}
-                  className="p-2.5 border border-slate-300 rounded hover:bg-slate-50"
+                  className="p-3 border border-slate-300 rounded-lg hover:bg-slate-50 text-lg"
                   title="Open saved scenario"
                 >
                   📁
                 </button>
                 {showScenarioList && (
-                  <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-10 min-w-40">
+                  <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-10 min-w-48">
                     {scenarios.map(s => (
                       <button
                         key={s.id}
                         onClick={() => { loadScenario(s.id); setShowScenarioList(false); }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                        className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50"
                       >
                         {s.name}
                       </button>
@@ -189,7 +189,7 @@ export const MultiPage = () => {
           />
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="mt-4 p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+            className="mt-4 p-3 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg text-lg"
             title="Import from file"
           >
             ↑
@@ -205,23 +205,23 @@ export const MultiPage = () => {
   return (
     <PageContainer>
       {/* Scenario Toolbar - simplified with icons and in-place editing */}
-      <div className="flex items-center gap-1 mb-4 pb-3 border-b border-slate-200">
+      <div className="flex items-center gap-1 mb-4 pb-3 border-b border-slate-200 overflow-x-auto scrollbar-hide">
         {/* Scenario selector */}
-        <div className="relative">
+        <div className="relative flex-shrink-0">
           <button
             onClick={() => setShowScenarioList(!showScenarioList)}
-            className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+            className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
             title="Scenarios"
           >
             ▼
           </button>
           {showScenarioList && (
-            <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-20 min-w-48">
+            <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 min-w-48">
               {scenarios.length > 0 && scenarios.map(s => (
                 <button
                   key={s.id}
                   onClick={() => { loadScenario(s.id); setShowScenarioList(false); }}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 flex items-center justify-between"
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 flex items-center justify-between"
                 >
                   <span>{s.name}</span>
                   {s.id === currentScenario.id && <span className="text-blue-500">●</span>}
@@ -230,7 +230,7 @@ export const MultiPage = () => {
               <div className="border-t">
                 <button
                   onClick={() => { newScenario(); setShowScenarioList(false); }}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 text-blue-600"
+                  className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 text-blue-600"
                 >
                   + New
                 </button>
@@ -240,7 +240,7 @@ export const MultiPage = () => {
                   <button
                     key={p.id}
                     onClick={() => { importPreset(p); setShowScenarioList(false); }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 text-slate-500"
+                    className="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 text-slate-500"
                   >
                     {p.name}
                   </button>
@@ -255,36 +255,36 @@ export const MultiPage = () => {
           type="text"
           value={currentScenario.name}
           onChange={(e) => renameScenario(e.target.value)}
-          className="px-2 py-1 text-sm font-medium bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none min-w-32"
+          className="px-2 py-2 text-sm font-medium bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none min-w-32"
         />
 
-        <div className="w-px h-5 bg-slate-200 mx-1" />
+        <div className="w-px h-6 bg-slate-200 mx-1 flex-shrink-0" />
 
         {/* Icon buttons */}
         <button
           onClick={duplicateScenario}
-          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+          className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg flex-shrink-0"
           title="Duplicate"
         >
           ⧉
         </button>
         <button
           onClick={handleExportJSON}
-          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+          className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg flex-shrink-0"
           title="Export"
         >
           ↑
         </button>
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+          className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg flex-shrink-0"
           title="Import"
         >
           ↓
         </button>
         <button
           onClick={() => deleteScenario(currentScenario.id)}
-          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+          className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg flex-shrink-0"
           title="Delete"
         >
           ×
@@ -302,17 +302,17 @@ export const MultiPage = () => {
 
         {/* Code export buttons */}
         {considerations.length > 0 && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <button
               onClick={handleCopyCurves}
-              className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50"
+              className="px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50"
               title="Copy curves as C#"
             >
               {copiedCurves ? '✓' : '📋 C#'}
             </button>
             <button
               onClick={handleCopyScorer}
-              className="px-2 py-1 text-xs border border-slate-300 rounded hover:bg-slate-50"
+              className="px-3 py-2 text-sm border border-slate-300 rounded-lg hover:bg-slate-50"
               title="Copy IAUS scorer"
             >
               {copiedScorer ? '✓' : '📋 IAUS'}
@@ -321,12 +321,12 @@ export const MultiPage = () => {
         )}
       </div>
 
-      {/* Action Tabs - click to select, double-click to edit */}
-      <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-2">
+      {/* Action Tabs - click name to edit, click tab to select */}
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-2 scrollbar-hide">
         {currentScenario.actions.map((action) => (
           <div
             key={action.id}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm cursor-pointer whitespace-nowrap ${
               action.id === activeActionId
                 ? 'bg-blue-500 text-white'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -340,19 +340,26 @@ export const MultiPage = () => {
                 onChange={(e) => setEditName(e.target.value)}
                 onBlur={handleFinishEditAction}
                 onKeyDown={(e) => e.key === 'Enter' && handleFinishEditAction()}
-                className="w-20 px-1 text-sm rounded text-slate-800"
+                className="w-24 px-2 py-1 text-sm rounded text-slate-800"
                 autoFocus
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span onDoubleClick={(e) => { e.stopPropagation(); handleStartEditAction(action.id, action.name); }}>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveAction(action.id);
+                  handleStartEditAction(action.id, action.name);
+                }}
+                className="cursor-text"
+              >
                 {action.name}
               </span>
             )}
             {action.id === activeActionId && currentScenario.actions.length > 1 && (
               <button
                 onClick={(e) => { e.stopPropagation(); removeAction(action.id); }}
-                className="ml-1 opacity-70 hover:opacity-100"
+                className="p-1 -mr-1 opacity-70 hover:opacity-100 hover:bg-blue-600 rounded"
                 title="Remove"
               >
                 ×
@@ -362,7 +369,7 @@ export const MultiPage = () => {
         ))}
         <button
           onClick={() => addAction()}
-          className="px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 rounded"
+          className="px-4 py-2.5 text-sm text-slate-500 hover:bg-slate-100 rounded-lg whitespace-nowrap"
           title="Add action"
         >
           +
@@ -378,7 +385,7 @@ export const MultiPage = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => addConsideration()}
-                className="p-1.5 bg-blue-500 text-white rounded hover:bg-blue-600"
+                className="p-2.5 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
                 title="Add consideration"
               >
                 +
@@ -392,7 +399,7 @@ export const MultiPage = () => {
                     }
                     e.target.value = '';
                   }}
-                  className="px-2 py-1 text-sm border border-slate-300 rounded"
+                  className="px-3 py-2 text-sm border border-slate-300 rounded-lg"
                   defaultValue=""
                 >
                   <option value="">+ Library</option>

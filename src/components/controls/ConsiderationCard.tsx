@@ -39,7 +39,7 @@ export const ConsiderationCard = ({
         <span className="text-sm text-red-600">Invalid curve</span>
         <button
           onClick={onRemove}
-          className="p-1 text-red-400 hover:text-red-600"
+          className="p-2 text-red-400 hover:text-red-600 hover:bg-red-100 rounded"
           title="Remove"
         >
           ×
@@ -83,7 +83,7 @@ export const ConsiderationCard = ({
     <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
       {/* Header */}
       <div
-        className="flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-50"
+        className="flex items-center gap-3 p-3 cursor-pointer hover:bg-slate-50 min-h-[56px]"
         onClick={() => setExpanded(!expanded)}
       >
         <svg width="50" height="30" className="flex-shrink-0">
@@ -102,7 +102,7 @@ export const ConsiderationCard = ({
             e.stopPropagation();
             onRemove();
           }}
-          className="p-1 text-slate-400 hover:text-red-500"
+          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"
           title="Remove"
         >
           ×
@@ -183,18 +183,18 @@ export const ConsiderationCard = ({
 
           {/* Invert & Edit link */}
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer" title="Invert output (1-y)">
+            <label className="flex items-center gap-2 cursor-pointer py-1 px-1" title="Invert output (1-y)">
               <input
                 type="checkbox"
                 checked={curve.invert}
                 onChange={() => onCurveChange({ invert: !curve.invert })}
-                className="w-4 h-4 accent-blue-500"
+                className="w-5 h-5 accent-blue-500"
               />
               <span className="text-sm text-slate-600">⟲</span>
             </label>
             <button
               onClick={onEditInFullEditor}
-              className="p-1 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+              className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
               title="Edit in full editor"
             >
               ↗

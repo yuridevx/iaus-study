@@ -41,7 +41,7 @@ export const SavedCurveCard = ({ curve, isActive, onLoad, onDelete }: SavedCurve
           e.stopPropagation();
           onDelete();
         }}
-        className="absolute top-1 right-1 w-5 h-5 text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 rounded"
+        className="absolute top-0.5 right-0.5 w-7 h-7 text-sm text-slate-400 hover:text-red-500 hover:bg-red-50 rounded flex items-center justify-center"
         title="Delete"
       >
         ×

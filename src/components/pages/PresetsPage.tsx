@@ -39,12 +39,12 @@ const CurvePreview = ({ type, onClick }: CurvePreviewProps) => {
   return (
     <div
       onClick={onClick}
-      className="bg-white rounded-lg border border-slate-200 p-3 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all"
+      className="bg-white rounded-lg border border-slate-200 p-4 cursor-pointer hover:border-blue-400 hover:shadow-md transition-all active:scale-95"
     >
       <svg width="80" height="50" className="mx-auto">
         <path d={pathD} fill="none" stroke="#3b82f6" strokeWidth="2" />
       </svg>
-      <div className="text-xs text-center text-slate-600 mt-2">
+      <div className="text-sm text-center text-slate-600 mt-2">
         {curveNames[type]}
       </div>
     </div>
@@ -103,7 +103,7 @@ export const PresetsPage = () => {
                   </div>
                   <button
                     onClick={() => handleLoadScenario(scenario.id)}
-                    className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-lg"
                     title="Import preset"
                   >
                     ↓

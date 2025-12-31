@@ -72,7 +72,7 @@ export const CurvesPage = () => {
           {(returnTo === 'multi' || returnTo === 'simulator') && (
             <button
               onClick={handleBack}
-              className="px-3 py-2 text-sm text-blue-500 border border-blue-300 rounded-md hover:bg-blue-50 flex items-center gap-1"
+              className="px-4 py-2.5 text-sm text-blue-500 border border-blue-300 rounded-lg hover:bg-blue-50 flex items-center gap-2"
             >
               <span>&larr;</span> {returnTo === 'simulator' ? 'Back to Simulator' : 'Back to Multi'}
             </button>
@@ -87,21 +87,21 @@ export const CurvesPage = () => {
           <div className="flex gap-2">
             <button
               onClick={handleCopyCode}
-              className="px-3 py-2 text-sm border border-slate-300 rounded-md hover:bg-slate-50"
+              className="px-4 py-2.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50"
               title="Copy C# code"
             >
               {copied ? "✓" : "📋 C#"}
             </button>
             <button
               onClick={() => saveCurve(currentCurve)}
-              className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+              className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
               title="Save to library"
             >
               ★
             </button>
             <button
               onClick={resetCurrentCurve}
-              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+              className="p-2.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
               title="New curve"
             >
               ◎
@@ -157,10 +157,10 @@ export const CurvesPage = () => {
               {/* Piecewise Linear Points Editor */}
               {currentCurve.type === 'piecewiseLinear' && (
                 <div className="space-y-2">
-                  <div className="text-xs text-slate-500 font-medium">Points</div>
+                  <div className="text-sm text-slate-500 font-medium">Points</div>
                   {(currentCurve.params.points ?? []).map((point: CurvePoint, idx: number) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400 w-4">{idx + 1}</span>
+                      <span className="text-sm text-slate-400 w-5">{idx + 1}</span>
                       <input
                         type="number"
                         value={point.x}
@@ -172,10 +172,10 @@ export const CurvesPage = () => {
                           newPoints[idx] = { ...newPoints[idx], x: parseFloat(e.target.value) || 0 };
                           updateCurrentCurveParams({ points: newPoints });
                         }}
-                        className="w-16 px-2 py-1 text-xs border border-slate-200 rounded"
+                        className="w-20 px-3 py-2 text-sm border border-slate-200 rounded-lg"
                         placeholder="x"
                       />
-                      <span className="text-xs text-slate-400">,</span>
+                      <span className="text-sm text-slate-400">,</span>
                       <input
                         type="number"
                         value={point.y}
@@ -187,7 +187,7 @@ export const CurvesPage = () => {
                           newPoints[idx] = { ...newPoints[idx], y: parseFloat(e.target.value) || 0 };
                           updateCurrentCurveParams({ points: newPoints });
                         }}
-                        className="w-16 px-2 py-1 text-xs border border-slate-200 rounded"
+                        className="w-20 px-3 py-2 text-sm border border-slate-200 rounded-lg"
                         placeholder="y"
                       />
                       <button
@@ -195,7 +195,7 @@ export const CurvesPage = () => {
                           const newPoints = (currentCurve.params.points ?? []).filter((_: CurvePoint, i: number) => i !== idx);
                           updateCurrentCurveParams({ points: newPoints.length > 0 ? newPoints : [{ x: 0, y: 0 }] });
                         }}
-                        className="text-red-400 hover:text-red-600 text-xs px-1"
+                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
                         title="Remove point"
                       >
                         ×
@@ -211,7 +211,7 @@ export const CurvesPage = () => {
                         points: [...points, { x: newX, y: lastPoint.y }],
                       });
                     }}
-                    className="p-1 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded"
+                    className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg"
                     title="Add point"
                   >
                     +
@@ -238,12 +238,12 @@ export const CurvesPage = () => {
               />
 
               {/* Invert toggle */}
-              <label className="flex items-center gap-2 cursor-pointer" title="Invert output (1-y)">
+              <label className="flex items-center gap-2 cursor-pointer py-1 px-1" title="Invert output (1-y)">
                 <input
                   type="checkbox"
                   checked={currentCurve.invert}
                   onChange={toggleCurrentCurveInvert}
-                  className="w-4 h-4 accent-blue-500"
+                  className="w-5 h-5 accent-blue-500"
                 />
                 <span className="text-sm text-slate-600">⟲</span>
               </label>

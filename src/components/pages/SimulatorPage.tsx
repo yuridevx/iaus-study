@@ -59,14 +59,14 @@ const MiniCurvePreview = ({ curve }: { curve: CurveConfig | null | undefined }) 
 
   if (!isValidCurve(curve)) {
     return (
-      <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">
+      <div className="w-10 h-10 bg-red-100 rounded flex items-center justify-center flex-shrink-0">
         <span className="text-red-400 text-xs">?</span>
       </div>
     );
   }
 
   return (
-    <div className="w-8 h-8 bg-slate-100 rounded overflow-hidden">
+    <div className="w-10 h-10 bg-slate-100 rounded overflow-hidden flex-shrink-0">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={points} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
           <Line
@@ -142,7 +142,7 @@ export const SimulatorPage = () => {
           <div className="text-lg mb-4">No scenario to simulate</div>
           <button
             onClick={() => navigate('/multi')}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-5 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-base"
           >
             Create scenario in Multi
           </button>
@@ -164,7 +164,7 @@ export const SimulatorPage = () => {
           </div>
           <button
             onClick={() => navigate('/multi')}
-            className="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50"
+            className="px-4 py-2.5 text-sm border border-slate-300 rounded-lg hover:bg-slate-50"
           >
             ✎ Edit
           </button>
@@ -191,23 +191,23 @@ export const SimulatorPage = () => {
                   </div>
 
                   {/* Considerations */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-2">
                     {action.considerations.map((c) => {
                       if (!isValidCurve(c?.curve)) {
                         return (
-                          <div key={c.id} className="flex items-center gap-1.5 text-red-400 text-xs">
-                            <div className="w-8 h-8 bg-red-100 rounded flex items-center justify-center">?</div>
+                          <div key={c.id} className="flex items-center gap-2 text-red-400 text-sm">
+                            <div className="w-10 h-10 bg-red-100 rounded flex items-center justify-center flex-shrink-0">?</div>
                             <span>Invalid curve</span>
                           </div>
                         );
                       }
                       const output = evaluateCurve(c.curve.type, c.inputValue, c.curve.params, c.curve.invert);
                       return (
-                        <div key={c.id} className="flex items-center gap-1.5">
+                        <div key={c.id} className="flex items-center gap-2">
                           <MiniCurvePreview curve={c.curve} />
                           <button
                             onClick={() => handleEditCurve(action.id, c)}
-                            className="text-xs text-slate-600 hover:text-blue-600 w-14 truncate text-left"
+                            className="text-sm text-slate-600 hover:text-blue-600 w-16 truncate text-left flex-shrink-0"
                             title={`Edit ${c.curve.name}`}
                           >
                             {c.curve.name}
@@ -219,9 +219,9 @@ export const SimulatorPage = () => {
                             step={0.01}
                             value={c.inputValue}
                             onChange={(e) => updateConsiderationInput(c.id, parseFloat(e.target.value))}
-                            className="flex-1 h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-blue-500"
+                            className="flex-1 h-2 bg-slate-200 rounded appearance-none cursor-pointer accent-blue-500"
                           />
-                          <span className="text-xs font-mono text-slate-600 w-8">{output.toFixed(2)}</span>
+                          <span className="text-sm font-mono text-slate-600 w-10 text-right flex-shrink-0">{output.toFixed(2)}</span>
                         </div>
                       );
                     })}
@@ -288,7 +288,7 @@ export const SimulatorPage = () => {
         {/* Row 4: Winner Sweep + 2D Decision Map */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
               <h3 className="text-sm font-medium text-slate-500">Sweep</h3>
               <select
                 value={`${sweepActionId}:${sweepConsiderationIdx}`}
@@ -297,7 +297,7 @@ export const SimulatorPage = () => {
                   setSweepActionId(aId);
                   setSweepConsiderationIdx(parseInt(cIdx, 10));
                 }}
-                className="text-xs border border-slate-200 rounded px-2 py-1"
+                className="text-sm border border-slate-200 rounded-lg px-3 py-2"
               >
                 {actions.flatMap((a) =>
                   a.considerations.map((c, idx) => (
@@ -317,10 +317,10 @@ export const SimulatorPage = () => {
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
               <h3 className="text-sm font-medium text-slate-500">2D Map</h3>
-              <div className="flex gap-2 text-xs">
-                <label className="flex items-center gap-1">
+              <div className="flex flex-col sm:flex-row gap-2 text-sm">
+                <label className="flex items-center gap-2">
                   X:
                   <select
                     value={`${map2dXActionId}:${map2dXConsiderationIdx}`}
@@ -329,7 +329,7 @@ export const SimulatorPage = () => {
                       setMap2dXActionId(aId);
                       setMap2dXConsiderationIdx(parseInt(cIdx, 10));
                     }}
-                    className="border border-slate-200 rounded px-1 py-0.5"
+                    className="border border-slate-200 rounded-lg px-3 py-2"
                   >
                     {actions.flatMap((a) =>
                       a.considerations.map((c, idx) => (
@@ -340,7 +340,7 @@ export const SimulatorPage = () => {
                     )}
                   </select>
                 </label>
-                <label className="flex items-center gap-1">
+                <label className="flex items-center gap-2">
                   Y:
                   <select
                     value={`${map2dYActionId}:${map2dYConsiderationIdx}`}
@@ -349,7 +349,7 @@ export const SimulatorPage = () => {
                       setMap2dYActionId(aId);
                       setMap2dYConsiderationIdx(parseInt(cIdx, 10));
                     }}
-                    className="border border-slate-200 rounded px-1 py-0.5"
+                    className="border border-slate-200 rounded-lg px-3 py-2"
                   >
                     {actions.flatMap((a) =>
                       a.considerations.map((c, idx) => (
