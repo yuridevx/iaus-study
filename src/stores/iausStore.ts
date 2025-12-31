@@ -55,7 +55,6 @@ interface IAUSState {
   scenarios: Scenario[];
   currentScenario: Scenario | null;
   activeActionId: string | null;
-  isDirty: boolean;
 
   // Current curve methods
   setCurrentCurve: (curve: CurveConfig) => void;
@@ -102,6 +101,17 @@ interface IAUSState {
 // Deep clone to avoid mutation
 const clone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
+// Auto-save helper: updates currentScenario and syncs to scenarios list
+const autoSave = (state: IAUSState, updates: Partial<Scenario>): Partial<IAUSState> => {
+  if (!state.currentScenario) return {};
+  const updated = { ...state.currentScenario, ...updates, updatedAt: Date.now() };
+  const existingIdx = state.scenarios.findIndex(s => s.id === updated.id);
+  const scenarios = existingIdx >= 0
+    ? state.scenarios.map((s, i) => i === existingIdx ? updated : s)
+    : [...state.scenarios, updated];
+  return { scenarios, currentScenario: updated };
+};
+
 export const useIAUSStore = create<IAUSState>()(
   persist(
     (set, get) => ({
@@ -118,7 +128,6 @@ export const useIAUSStore = create<IAUSState>()(
       scenarios: [],
       currentScenario: null,
       activeActionId: null,
-      isDirty: false,
 
       // Current curve methods
       setCurrentCurve: (curve) => set({ currentCurve: curve }),
@@ -187,25 +196,17 @@ export const useIAUSStore = create<IAUSState>()(
         return {};
       }),
 
-      // Scenario CRUD
+      // Scenario CRUD (all methods auto-save)
       newScenario: () => {
         const scenario = createEmptyScenario();
-        set({
+        set((state) => ({
+          scenarios: [...state.scenarios, scenario],
           currentScenario: scenario,
           activeActionId: scenario.actions[0]?.id || null,
-          isDirty: true,
-        });
+        }));
       },
 
-      saveScenario: () => set((state) => {
-        if (!state.currentScenario) return {};
-        const updated = { ...state.currentScenario, updatedAt: Date.now() };
-        const existingIdx = state.scenarios.findIndex(s => s.id === updated.id);
-        const scenarios = existingIdx >= 0
-          ? state.scenarios.map((s, i) => i === existingIdx ? updated : s)
-          : [...state.scenarios, updated];
-        return { scenarios, currentScenario: updated, isDirty: false };
-      }),
+      saveScenario: () => set((state) => autoSave(state, {})),
 
       saveScenarioAs: (name) => set((state) => {
         if (!state.currentScenario) return {};
@@ -219,7 +220,6 @@ export const useIAUSStore = create<IAUSState>()(
         return {
           scenarios: [...state.scenarios, newScenario],
           currentScenario: newScenario,
-          isDirty: false,
         };
       }),
 
@@ -230,7 +230,6 @@ export const useIAUSStore = create<IAUSState>()(
         return {
           currentScenario: loaded,
           activeActionId: loaded.actions[0]?.id || null,
-          isDirty: false,
         };
       }),
 
@@ -241,17 +240,10 @@ export const useIAUSStore = create<IAUSState>()(
           scenarios,
           currentScenario: isCurrent ? null : state.currentScenario,
           activeActionId: isCurrent ? null : state.activeActionId,
-          isDirty: isCurrent ? false : state.isDirty,
         };
       }),
 
-      renameScenario: (name) => set((state) => {
-        if (!state.currentScenario) return {};
-        return {
-          currentScenario: { ...state.currentScenario, name },
-          isDirty: true,
-        };
-      }),
+      renameScenario: (name) => set((state) => autoSave(state, { name })),
 
       duplicateScenario: () => set((state) => {
         if (!state.currentScenario) return {};
@@ -266,7 +258,6 @@ export const useIAUSStore = create<IAUSState>()(
           scenarios: [...state.scenarios, dup],
           currentScenario: dup,
           activeActionId: dup.actions[0]?.id || null,
-          isDirty: false,
         };
       }),
 
@@ -290,7 +281,6 @@ export const useIAUSStore = create<IAUSState>()(
           scenarios: [...state.scenarios, scenario],
           currentScenario: scenario,
           activeActionId: scenario.actions[0]?.id || null,
-          isDirty: false,
         }));
       },
 
@@ -329,7 +319,6 @@ export const useIAUSStore = create<IAUSState>()(
             scenarios: [...state.scenarios, scenario],
             currentScenario: scenario,
             activeActionId: scenario.actions[0]?.id || null,
-            isDirty: false,
           }));
           return true;
         } catch {
@@ -347,17 +336,14 @@ export const useIAUSStore = create<IAUSState>()(
         return JSON.stringify(exportData, null, 2);
       },
 
-      // Action CRUD
+      // Action CRUD (auto-saves)
       addAction: (name) => set((state) => {
         if (!state.currentScenario) return {};
         const newAction = createDefaultAction(name || `Action ${state.currentScenario.actions.length + 1}`);
+        const actions = [...state.currentScenario.actions, newAction];
         return {
-          currentScenario: {
-            ...state.currentScenario,
-            actions: [...state.currentScenario.actions, newAction],
-          },
+          ...autoSave(state, { actions }),
           activeActionId: newAction.id,
-          isDirty: true,
         };
       }),
 
@@ -366,89 +352,63 @@ export const useIAUSStore = create<IAUSState>()(
         const actions = state.currentScenario.actions.filter(a => a.id !== id);
         const needNewActive = state.activeActionId === id;
         return {
-          currentScenario: { ...state.currentScenario, actions },
+          ...autoSave(state, { actions }),
           activeActionId: needNewActive ? (actions[0]?.id || null) : state.activeActionId,
-          isDirty: true,
         };
       }),
 
       renameAction: (id, name) => set((state) => {
         if (!state.currentScenario) return {};
-        return {
-          currentScenario: {
-            ...state.currentScenario,
-            actions: state.currentScenario.actions.map(a =>
-              a.id === id ? { ...a, name } : a
-            ),
-          },
-          isDirty: true,
-        };
+        const actions = state.currentScenario.actions.map(a =>
+          a.id === id ? { ...a, name } : a
+        );
+        return autoSave(state, { actions });
       }),
 
       setActiveAction: (id) => set({ activeActionId: id }),
 
-      // Consideration CRUD
+      // Consideration CRUD (auto-saves)
       addConsideration: (curve) => set((state) => {
         if (!state.currentScenario || !state.activeActionId) return {};
         const consideration = createDefaultConsideration(curve);
-        return {
-          currentScenario: {
-            ...state.currentScenario,
-            actions: state.currentScenario.actions.map(a =>
-              a.id === state.activeActionId
-                ? { ...a, considerations: [...a.considerations, consideration] }
-                : a
-            ),
-          },
-          isDirty: true,
-        };
+        const actions = state.currentScenario.actions.map(a =>
+          a.id === state.activeActionId
+            ? { ...a, considerations: [...a.considerations, consideration] }
+            : a
+        );
+        return autoSave(state, { actions });
       }),
 
       removeConsideration: (id) => set((state) => {
         if (!state.currentScenario || !state.activeActionId) return {};
-        return {
-          currentScenario: {
-            ...state.currentScenario,
-            actions: state.currentScenario.actions.map(a =>
-              a.id === state.activeActionId
-                ? { ...a, considerations: a.considerations.filter(c => c.id !== id) }
-                : a
-            ),
-          },
-          isDirty: true,
-        };
+        const actions = state.currentScenario.actions.map(a =>
+          a.id === state.activeActionId
+            ? { ...a, considerations: a.considerations.filter(c => c.id !== id) }
+            : a
+        );
+        return autoSave(state, { actions });
       }),
 
       updateConsiderationInput: (id, value) => set((state) => {
         if (!state.currentScenario) return {};
-        return {
-          currentScenario: {
-            ...state.currentScenario,
-            actions: state.currentScenario.actions.map(a => ({
-              ...a,
-              considerations: a.considerations.map(c =>
-                c.id === id ? { ...c, inputValue: value } : c
-              ),
-            })),
-          },
-          isDirty: true,
-        };
+        const actions = state.currentScenario.actions.map(a => ({
+          ...a,
+          considerations: a.considerations.map(c =>
+            c.id === id ? { ...c, inputValue: value } : c
+          ),
+        }));
+        return autoSave(state, { actions });
       }),
 
       updateConsiderationCurve: (id, curve) => set((state) => {
         if (!state.currentScenario) return {};
-        return {
-          currentScenario: {
-            ...state.currentScenario,
-            actions: state.currentScenario.actions.map(a => ({
-              ...a,
-              considerations: a.considerations.map(c =>
-                c.id === id ? { ...c, curve } : c
-              ),
-            })),
-          },
-          isDirty: true,
-        };
+        const actions = state.currentScenario.actions.map(a => ({
+          ...a,
+          considerations: a.considerations.map(c =>
+            c.id === id ? { ...c, curve } : c
+          ),
+        }));
+        return autoSave(state, { actions });
       }),
 
       // Library config

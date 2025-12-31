@@ -22,12 +22,9 @@ export const MultiPage = () => {
     scenarios,
     currentScenario,
     activeActionId,
-    isDirty,
     savedCurves,
     libraryConfig,
     newScenario,
-    saveScenario,
-    saveScenarioAs,
     loadScenario,
     deleteScenario,
     renameScenario,
@@ -46,15 +43,11 @@ export const MultiPage = () => {
     setCurrentCurve,
   } = useIAUSStore();
 
-  const [showMenu, setShowMenu] = useState(false);
   const [showScenarioList, setShowScenarioList] = useState(false);
-  const [editingScenarioName, setEditingScenarioName] = useState(false);
   const [editingActionId, setEditingActionId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [copiedCurves, setCopiedCurves] = useState(false);
   const [copiedScorer, setCopiedScorer] = useState(false);
-  const [saveAsName, setSaveAsName] = useState('');
-  const [showSaveAs, setShowSaveAs] = useState(false);
 
   const activeAction = currentScenario?.actions.find(a => a.id === activeActionId);
   const considerations = activeAction?.considerations || [];
@@ -90,7 +83,6 @@ export const MultiPage = () => {
     a.download = `${currentScenario?.name || 'scenario'}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setShowMenu(false);
   };
 
   const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,30 +95,6 @@ export const MultiPage = () => {
     };
     reader.readAsText(file);
     e.target.value = '';
-    setShowMenu(false);
-  };
-
-  const handleSaveAs = () => {
-    if (saveAsName.trim()) {
-      saveScenarioAs(saveAsName.trim());
-      setSaveAsName('');
-      setShowSaveAs(false);
-    }
-  };
-
-  const handleStartEditScenarioName = () => {
-    if (currentScenario) {
-      setEditName(currentScenario.name);
-      setEditingScenarioName(true);
-    }
-  };
-
-  const handleFinishEditScenarioName = () => {
-    if (editName.trim()) {
-      renameScenario(editName.trim());
-    }
-    setEditingScenarioName(false);
-    setEditName('');
   };
 
   const handleStartEditAction = (actionId: string, name: string) => {
@@ -225,66 +193,45 @@ export const MultiPage = () => {
 
   return (
     <PageContainer>
-      {/* Scenario Toolbar */}
-      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-200">
+      {/* Scenario Toolbar - simplified with icons and in-place editing */}
+      <div className="flex items-center gap-1 mb-4 pb-3 border-b border-slate-200">
         {/* Scenario selector */}
         <div className="relative">
           <button
             onClick={() => setShowScenarioList(!showScenarioList)}
-            className="flex items-center gap-2 px-3 py-1.5 border border-slate-300 rounded hover:bg-slate-50"
+            className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+            title="Scenarios"
           >
-            <span className="text-slate-400">📁</span>
-            {editingScenarioName ? (
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                onBlur={handleFinishEditScenarioName}
-                onKeyDown={(e) => e.key === 'Enter' && handleFinishEditScenarioName()}
-                className="w-32 px-1 border rounded text-sm"
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <span className="text-sm font-medium">{currentScenario.name}</span>
-            )}
-            {isDirty && <span className="text-orange-500 text-xs">●</span>}
-            <span className="text-slate-400 text-xs">▼</span>
+            ▼
           </button>
           {showScenarioList && (
             <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-20 min-w-48">
-              {scenarios.length > 0 && (
-                <>
-                  <div className="px-3 py-1.5 text-xs text-slate-400 border-b">Saved</div>
-                  {scenarios.map(s => (
-                    <button
-                      key={s.id}
-                      onClick={() => { loadScenario(s.id); setShowScenarioList(false); }}
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 flex items-center justify-between"
-                    >
-                      <span>{s.name}</span>
-                      {s.id === currentScenario.id && <span className="text-green-500">✓</span>}
-                    </button>
-                  ))}
-                </>
-              )}
+              {scenarios.length > 0 && scenarios.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => { loadScenario(s.id); setShowScenarioList(false); }}
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 flex items-center justify-between"
+                >
+                  <span>{s.name}</span>
+                  {s.id === currentScenario.id && <span className="text-blue-500">●</span>}
+                </button>
+              ))}
               <div className="border-t">
                 <button
                   onClick={() => { newScenario(); setShowScenarioList(false); }}
-                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 text-blue-600"
                 >
                   + New
                 </button>
               </div>
               <div className="border-t">
-                <div className="px-3 py-1.5 text-xs text-slate-400">Presets</div>
                 {presetScenarios.map(p => (
                   <button
                     key={p.id}
                     onClick={() => { importPreset(p); setShowScenarioList(false); }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                    className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50 text-slate-500"
                   >
-                    ↓ {p.name}
+                    {p.name}
                   </button>
                 ))}
               </div>
@@ -292,69 +239,45 @@ export const MultiPage = () => {
           )}
         </div>
 
-        {/* Edit name button */}
-        <button
-          onClick={handleStartEditScenarioName}
-          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded"
-          title="Rename"
-        >
-          ✎
-        </button>
+        {/* Inline editable scenario name */}
+        <input
+          type="text"
+          value={currentScenario.name}
+          onChange={(e) => renameScenario(e.target.value)}
+          className="px-2 py-1 text-sm font-medium bg-transparent border-b border-transparent hover:border-slate-300 focus:border-blue-500 focus:outline-none min-w-32"
+        />
 
-        {/* Save button */}
-        <button
-          onClick={saveScenario}
-          className={`px-3 py-1.5 text-sm rounded ${isDirty ? 'bg-blue-500 text-white hover:bg-blue-600' : 'border border-slate-300 text-slate-500 hover:bg-slate-50'}`}
-          title="Save"
-        >
-          💾
-        </button>
+        <div className="w-px h-5 bg-slate-200 mx-1" />
 
-        {/* More menu */}
-        <div className="relative">
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="px-2 py-1.5 text-slate-500 border border-slate-300 rounded hover:bg-slate-50"
-          >
-            ⋯
-          </button>
-          {showMenu && (
-            <div className="absolute top-full right-0 mt-1 bg-white border border-slate-200 rounded shadow-lg z-20 min-w-36">
-              <button
-                onClick={() => { setShowSaveAs(true); setShowMenu(false); }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
-              >
-                Save as...
-              </button>
-              <button
-                onClick={() => { duplicateScenario(); setShowMenu(false); }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
-              >
-                📋 Duplicate
-              </button>
-              <div className="border-t" />
-              <button
-                onClick={handleExportJSON}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
-              >
-                ↑ Export JSON
-              </button>
-              <button
-                onClick={() => { fileInputRef.current?.click(); setShowMenu(false); }}
-                className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
-              >
-                ↓ Import JSON
-              </button>
-              <div className="border-t" />
-              <button
-                onClick={() => { deleteScenario(currentScenario.id); setShowMenu(false); }}
-                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-              >
-                🗑 Delete
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Icon buttons */}
+        <button
+          onClick={duplicateScenario}
+          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+          title="Duplicate"
+        >
+          ⧉
+        </button>
+        <button
+          onClick={handleExportJSON}
+          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+          title="Export"
+        >
+          ↑
+        </button>
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded"
+          title="Import"
+        >
+          ↓
+        </button>
+        <button
+          onClick={() => deleteScenario(currentScenario.id)}
+          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+          title="Delete"
+        >
+          ×
+        </button>
 
         <input
           ref={fileInputRef}
@@ -363,38 +286,6 @@ export const MultiPage = () => {
           onChange={handleImportJSON}
           className="hidden"
         />
-
-        {/* Save As Dialog */}
-        {showSaveAs && (
-          <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-4 shadow-xl min-w-64">
-              <div className="text-sm font-medium mb-2">Save as</div>
-              <input
-                type="text"
-                value={saveAsName}
-                onChange={(e) => setSaveAsName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSaveAs()}
-                placeholder="Scenario name"
-                className="w-full px-3 py-2 border rounded mb-3"
-                autoFocus
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => { setShowSaveAs(false); setSaveAsName(''); }}
-                  className="px-3 py-1.5 text-sm border rounded hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveAs}
-                  className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         <div className="flex-1" />
 
@@ -419,7 +310,7 @@ export const MultiPage = () => {
         )}
       </div>
 
-      {/* Action Tabs */}
+      {/* Action Tabs - click to select, double-click to edit */}
       <div className="flex items-center gap-1 mb-4 overflow-x-auto pb-2">
         {currentScenario.actions.map((action) => (
           <div
@@ -443,27 +334,18 @@ export const MultiPage = () => {
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <span>{action.name}</span>
+              <span onDoubleClick={(e) => { e.stopPropagation(); handleStartEditAction(action.id, action.name); }}>
+                {action.name}
+              </span>
             )}
-            {action.id === activeActionId && (
-              <>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleStartEditAction(action.id, action.name); }}
-                  className="ml-1 opacity-70 hover:opacity-100"
-                  title="Rename"
-                >
-                  ✎
-                </button>
-                {currentScenario.actions.length > 1 && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeAction(action.id); }}
-                    className="opacity-70 hover:opacity-100"
-                    title="Remove"
-                  >
-                    ×
-                  </button>
-                )}
-              </>
+            {action.id === activeActionId && currentScenario.actions.length > 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); removeAction(action.id); }}
+                className="ml-1 opacity-70 hover:opacity-100"
+                title="Remove"
+              >
+                ×
+              </button>
             )}
           </div>
         ))}
