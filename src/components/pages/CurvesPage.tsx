@@ -17,7 +17,6 @@ export const CurvesPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const returnTo = searchParams.get('returnTo');
-  const actionId = searchParams.get('actionId');
   const considerationId = searchParams.get('considerationId');
 
   const {
@@ -34,7 +33,6 @@ export const CurvesPage = () => {
     loadCurve,
     resetCurrentCurve,
     libraryConfig,
-    updateActionConsiderationCurve,
     updateConsiderationCurve,
   } = useIAUSStore();
 
@@ -42,13 +40,10 @@ export const CurvesPage = () => {
 
   const handleBack = () => {
     // Update the curve in the store before navigating back
-    if (returnTo === 'simulator' && actionId && considerationId) {
-      if (actionId === 'multi-page-sync') {
-        // Multi page uses different store method
-        updateConsiderationCurve(considerationId, currentCurve);
-      } else {
-        updateActionConsiderationCurve(actionId, considerationId, currentCurve);
-      }
+    if (considerationId) {
+      updateConsiderationCurve(considerationId, currentCurve);
+    }
+    if (returnTo === 'simulator') {
       navigate('/simulator');
     } else if (returnTo === 'multi') {
       navigate('/multi');

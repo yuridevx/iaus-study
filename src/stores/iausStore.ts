@@ -1,14 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { CurveConfig, CurveType, Consideration, Action, LibraryConfig, PresetScenario } from '../lib/types';
+import type { CurveConfig, CurveType, Consideration, Action, LibraryConfig, PresetScenario, Scenario } from '../lib/types';
 import { defaultParams } from '../lib/types';
-import { combatScenario } from '../lib/presets';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
 const createDefaultCurve = (name?: string): CurveConfig => ({
   id: generateId(),
-  name: name || 'Untitled Curve',
+  name: name || 'Curve',
   type: 'polynomial',
   params: { ...defaultParams.polynomial },
   invert: false,
@@ -16,18 +15,36 @@ const createDefaultCurve = (name?: string): CurveConfig => ({
 
 const createDefaultConsideration = (curve?: CurveConfig): Consideration => ({
   id: generateId(),
-  curve: curve || createDefaultCurve(),
+  curve: curve ? { ...curve, id: generateId() } : createDefaultCurve(),
   inputValue: 0.5,
 });
 
+const createDefaultAction = (name?: string): Action => ({
+  id: generateId(),
+  name: name || 'Action',
+  considerations: [createDefaultConsideration()],
+});
+
+const createEmptyScenario = (name?: string): Scenario => ({
+  id: generateId(),
+  name: name || 'Untitled',
+  actions: [createDefaultAction('Action 1')],
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+});
+
 interface IAUSState {
+  // Curve editor
   currentCurve: CurveConfig;
   testInput: number;
   savedCurves: CurveConfig[];
-  considerations: Consideration[];
-  actions: Action[];
-  scenarioInputs: Record<string, number>;
   libraryConfig: LibraryConfig;
+
+  // Scenario management
+  scenarios: Scenario[];
+  currentScenario: Scenario | null;
+  activeActionId: string | null;
+  isDirty: boolean;
 
   // Current curve methods
   setCurrentCurve: (curve: CurveConfig) => void;
@@ -43,55 +60,58 @@ interface IAUSState {
   deleteCurve: (id: string) => void;
   loadCurve: (id: string) => void;
 
-  // Multi page considerations methods
+  // Scenario CRUD
+  newScenario: () => void;
+  saveScenario: () => void;
+  saveScenarioAs: (name: string) => void;
+  loadScenario: (id: string) => void;
+  deleteScenario: (id: string) => void;
+  renameScenario: (name: string) => void;
+  duplicateScenario: () => void;
+  importPreset: (preset: PresetScenario) => void;
+  importFromJSON: (json: string) => boolean;
+  exportToJSON: () => string;
+
+  // Action CRUD (within current scenario)
+  addAction: (name?: string) => void;
+  removeAction: (id: string) => void;
+  renameAction: (id: string, name: string) => void;
+  setActiveAction: (id: string | null) => void;
+
+  // Consideration CRUD (within active action)
   addConsideration: (curve?: CurveConfig) => void;
   removeConsideration: (id: string) => void;
   updateConsiderationInput: (id: string, value: number) => void;
-  updateConsiderationCurve: (id: string, updates: Partial<CurveConfig>) => void;
-  loadSavedCurveToConsideration: (considerationId: string, curveId: string) => void;
-  setConsiderations: (considerations: Consideration[]) => void;
-
-  // Action CRUD methods (Simulator)
-  addAction: (name: string) => void;
-  removeAction: (id: string) => void;
-  updateActionName: (id: string, name: string) => void;
-
-  // Consideration CRUD within actions (Simulator)
-  addConsiderationToAction: (actionId: string, curve?: CurveConfig) => void;
-  removeConsiderationFromAction: (actionId: string, considerationId: string) => void;
-  updateActionConsiderationInput: (actionId: string, considerationId: string, value: number) => void;
-  updateActionConsiderationCurve: (actionId: string, considerationId: string, updates: Partial<CurveConfig>) => void;
-
-  // Scenario management
-  loadScenario: (scenario: PresetScenario) => void;
-  resetScenario: () => void;
+  updateConsiderationCurve: (id: string, curve: CurveConfig) => void;
 
   // Library config
   updateLibraryConfig: (config: Partial<LibraryConfig>) => void;
 }
 
-// Deep clone actions to avoid mutation issues
-const cloneActions = (actions: Action[]): Action[] =>
-  JSON.parse(JSON.stringify(actions));
+// Deep clone to avoid mutation
+const clone = <T>(obj: T): T => JSON.parse(JSON.stringify(obj));
 
 export const useIAUSStore = create<IAUSState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
+      // Initial state
       currentCurve: createDefaultCurve('New Curve'),
       testInput: 0.5,
       savedCurves: [],
-      considerations: [createDefaultConsideration()],
-      actions: cloneActions(combatScenario.actions),
-      scenarioInputs: {},
       libraryConfig: {
         numericType: 'float',
         mathLibrary: 'system',
         includeXmlDocs: true,
         includeInterface: true,
       },
-      
+      scenarios: [],
+      currentScenario: null,
+      activeActionId: null,
+      isDirty: false,
+
+      // Current curve methods
       setCurrentCurve: (curve) => set({ currentCurve: curve }),
-      
+
       updateCurrentCurveType: (type) => set((state) => ({
         currentCurve: {
           ...state.currentCurve,
@@ -99,14 +119,14 @@ export const useIAUSStore = create<IAUSState>()(
           params: { ...defaultParams[type], xShift: 0, yShift: 0 },
         },
       })),
-      
+
       updateCurrentCurveParams: (params) => set((state) => ({
         currentCurve: {
           ...state.currentCurve,
           params: { ...state.currentCurve.params, ...params },
         },
       })),
-      
+
       updateCurrentCurveName: (name) => set((state) => {
         const updatedCurve = { ...state.currentCurve, name };
         const existingIndex = state.savedCurves.findIndex(c => c.id === updatedCurve.id);
@@ -115,167 +135,315 @@ export const useIAUSStore = create<IAUSState>()(
           : [...state.savedCurves, updatedCurve];
         return { currentCurve: updatedCurve, savedCurves };
       }),
-      
+
       toggleCurrentCurveInvert: () => set((state) => ({
         currentCurve: {
           ...state.currentCurve,
           invert: !state.currentCurve.invert,
         },
       })),
-      
+
       setTestInput: (value) => set({ testInput: value }),
-      
+
+      resetCurrentCurve: () => set({
+        currentCurve: createDefaultCurve('New Curve'),
+        testInput: 0.5,
+      }),
+
+      // Saved curves
       saveCurve: (curve) => set((state) => {
         const existingIndex = state.savedCurves.findIndex(c => c.id === curve.id);
         if (existingIndex >= 0) {
           return {
-            savedCurves: state.savedCurves.map((c, i) => 
+            savedCurves: state.savedCurves.map((c, i) =>
               i === existingIndex ? curve : c
             ),
           };
         }
         return { savedCurves: [...state.savedCurves, curve] };
       }),
-      
+
       deleteCurve: (id) => set((state) => ({
         savedCurves: state.savedCurves.filter(c => c.id !== id),
-        currentCurve: state.currentCurve.id === id 
+        currentCurve: state.currentCurve.id === id
           ? createDefaultCurve('New Curve')
           : state.currentCurve,
       })),
-      
+
       loadCurve: (id) => set((state) => {
         const curve = state.savedCurves.find(c => c.id === id);
         if (curve) return { currentCurve: { ...curve } };
         return {};
       }),
-      
-      addConsideration: (curve) => set((state) => ({
-        considerations: [
-          ...state.considerations,
-          createDefaultConsideration(curve),
-        ],
-      })),
-      
-      removeConsideration: (id) => set((state) => ({
-        considerations: state.considerations.filter(c => c.id !== id),
-      })),
-      
-      updateConsiderationInput: (id, value) => set((state) => ({
-        considerations: state.considerations.map(c =>
-          c.id === id ? { ...c, inputValue: value } : c
-        ),
-      })),
-      
-      updateConsiderationCurve: (id, updates) => set((state) => ({
-        considerations: state.considerations.map(c =>
-          c.id === id ? { ...c, curve: { ...c.curve, ...updates } } : c
-        ),
-      })),
-      
-      loadSavedCurveToConsideration: (considerationId, curveId) => set((state) => {
-        const savedCurve = state.savedCurves.find(c => c.id === curveId);
-        if (!savedCurve) return {};
+
+      // Scenario CRUD
+      newScenario: () => {
+        const scenario = createEmptyScenario();
+        set({
+          currentScenario: scenario,
+          activeActionId: scenario.actions[0]?.id || null,
+          isDirty: true,
+        });
+      },
+
+      saveScenario: () => set((state) => {
+        if (!state.currentScenario) return {};
+        const updated = { ...state.currentScenario, updatedAt: Date.now() };
+        const existingIdx = state.scenarios.findIndex(s => s.id === updated.id);
+        const scenarios = existingIdx >= 0
+          ? state.scenarios.map((s, i) => i === existingIdx ? updated : s)
+          : [...state.scenarios, updated];
+        return { scenarios, currentScenario: updated, isDirty: false };
+      }),
+
+      saveScenarioAs: (name) => set((state) => {
+        if (!state.currentScenario) return {};
+        const newScenario: Scenario = {
+          ...clone(state.currentScenario),
+          id: generateId(),
+          name,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
         return {
-          considerations: state.considerations.map(c =>
-            c.id === considerationId
-              ? { ...c, curve: { ...savedCurve, id: generateId() } }
-              : c
-          ),
+          scenarios: [...state.scenarios, newScenario],
+          currentScenario: newScenario,
+          isDirty: false,
         };
       }),
 
-      setConsiderations: (considerations) => set({ considerations }),
+      loadScenario: (id) => set((state) => {
+        const scenario = state.scenarios.find(s => s.id === id);
+        if (!scenario) return {};
+        const loaded = clone(scenario);
+        return {
+          currentScenario: loaded,
+          activeActionId: loaded.actions[0]?.id || null,
+          isDirty: false,
+        };
+      }),
 
-      // Action CRUD methods (Simulator)
-      addAction: (name) => set((state) => ({
-        actions: [
-          ...state.actions,
-          {
+      deleteScenario: (id) => set((state) => {
+        const scenarios = state.scenarios.filter(s => s.id !== id);
+        const isCurrent = state.currentScenario?.id === id;
+        return {
+          scenarios,
+          currentScenario: isCurrent ? null : state.currentScenario,
+          activeActionId: isCurrent ? null : state.activeActionId,
+          isDirty: isCurrent ? false : state.isDirty,
+        };
+      }),
+
+      renameScenario: (name) => set((state) => {
+        if (!state.currentScenario) return {};
+        return {
+          currentScenario: { ...state.currentScenario, name },
+          isDirty: true,
+        };
+      }),
+
+      duplicateScenario: () => set((state) => {
+        if (!state.currentScenario) return {};
+        const dup: Scenario = {
+          ...clone(state.currentScenario),
+          id: generateId(),
+          name: `${state.currentScenario.name} (copy)`,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        return {
+          scenarios: [...state.scenarios, dup],
+          currentScenario: dup,
+          activeActionId: dup.actions[0]?.id || null,
+          isDirty: false,
+        };
+      }),
+
+      importPreset: (preset) => {
+        const scenario: Scenario = {
+          id: generateId(),
+          name: preset.name,
+          actions: clone(preset.actions).map(a => ({
+            ...a,
             id: generateId(),
-            name,
-            considerations: [createDefaultConsideration()],
+            considerations: a.considerations.map(c => ({
+              ...c,
+              id: generateId(),
+              curve: { ...c.curve, id: generateId() },
+            })),
+          })),
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        set((state) => ({
+          scenarios: [...state.scenarios, scenario],
+          currentScenario: scenario,
+          activeActionId: scenario.actions[0]?.id || null,
+          isDirty: false,
+        }));
+      },
+
+      importFromJSON: (json) => {
+        try {
+          const data = JSON.parse(json);
+          if (!data.name || !Array.isArray(data.actions)) return false;
+          const scenario: Scenario = {
+            id: generateId(),
+            name: data.name,
+            actions: data.actions.map((a: Action) => ({
+              id: generateId(),
+              name: a.name || 'Action',
+              considerations: (a.considerations || []).map((c: Consideration) => ({
+                id: generateId(),
+                inputValue: c.inputValue ?? 0.5,
+                curve: {
+                  ...c.curve,
+                  id: generateId(),
+                },
+              })),
+            })),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+          };
+          set((state) => ({
+            scenarios: [...state.scenarios, scenario],
+            currentScenario: scenario,
+            activeActionId: scenario.actions[0]?.id || null,
+            isDirty: false,
+          }));
+          return true;
+        } catch {
+          return false;
+        }
+      },
+
+      exportToJSON: () => {
+        const { currentScenario } = get();
+        if (!currentScenario) return '';
+        const exportData = {
+          name: currentScenario.name,
+          actions: currentScenario.actions,
+        };
+        return JSON.stringify(exportData, null, 2);
+      },
+
+      // Action CRUD
+      addAction: (name) => set((state) => {
+        if (!state.currentScenario) return {};
+        const newAction = createDefaultAction(name || `Action ${state.currentScenario.actions.length + 1}`);
+        return {
+          currentScenario: {
+            ...state.currentScenario,
+            actions: [...state.currentScenario.actions, newAction],
           },
-        ],
-      })),
-
-      removeAction: (id) => set((state) => ({
-        actions: state.actions.filter(a => a.id !== id),
-      })),
-
-      updateActionName: (id, name) => set((state) => ({
-        actions: state.actions.map(a =>
-          a.id === id ? { ...a, name } : a
-        ),
-      })),
-
-      // Consideration CRUD within actions
-      addConsiderationToAction: (actionId, curve) => set((state) => ({
-        actions: state.actions.map(a =>
-          a.id === actionId
-            ? { ...a, considerations: [...a.considerations, createDefaultConsideration(curve)] }
-            : a
-        ),
-      })),
-
-      removeConsiderationFromAction: (actionId, considerationId) => set((state) => ({
-        actions: state.actions.map(a =>
-          a.id === actionId
-            ? { ...a, considerations: a.considerations.filter(c => c.id !== considerationId) }
-            : a
-        ),
-      })),
-
-      updateActionConsiderationInput: (actionId, considerationId, value) => set((state) => ({
-        actions: state.actions.map(a =>
-          a.id === actionId
-            ? {
-                ...a,
-                considerations: a.considerations.map(c =>
-                  c.id === considerationId ? { ...c, inputValue: value } : c
-                ),
-              }
-            : a
-        ),
-      })),
-
-      updateActionConsiderationCurve: (actionId, considerationId, updates) => set((state) => ({
-        actions: state.actions.map(a =>
-          a.id === actionId
-            ? {
-                ...a,
-                considerations: a.considerations.map(c =>
-                  c.id === considerationId ? { ...c, curve: { ...c.curve, ...updates } } : c
-                ),
-              }
-            : a
-        ),
-      })),
-
-      // Scenario management
-      loadScenario: (scenario) => set({
-        actions: cloneActions(scenario.actions),
+          activeActionId: newAction.id,
+          isDirty: true,
+        };
       }),
 
-      resetScenario: () => set({
-        actions: cloneActions(combatScenario.actions),
+      removeAction: (id) => set((state) => {
+        if (!state.currentScenario) return {};
+        const actions = state.currentScenario.actions.filter(a => a.id !== id);
+        const needNewActive = state.activeActionId === id;
+        return {
+          currentScenario: { ...state.currentScenario, actions },
+          activeActionId: needNewActive ? (actions[0]?.id || null) : state.activeActionId,
+          isDirty: true,
+        };
       }),
 
+      renameAction: (id, name) => set((state) => {
+        if (!state.currentScenario) return {};
+        return {
+          currentScenario: {
+            ...state.currentScenario,
+            actions: state.currentScenario.actions.map(a =>
+              a.id === id ? { ...a, name } : a
+            ),
+          },
+          isDirty: true,
+        };
+      }),
+
+      setActiveAction: (id) => set({ activeActionId: id }),
+
+      // Consideration CRUD
+      addConsideration: (curve) => set((state) => {
+        if (!state.currentScenario || !state.activeActionId) return {};
+        const consideration = createDefaultConsideration(curve);
+        return {
+          currentScenario: {
+            ...state.currentScenario,
+            actions: state.currentScenario.actions.map(a =>
+              a.id === state.activeActionId
+                ? { ...a, considerations: [...a.considerations, consideration] }
+                : a
+            ),
+          },
+          isDirty: true,
+        };
+      }),
+
+      removeConsideration: (id) => set((state) => {
+        if (!state.currentScenario || !state.activeActionId) return {};
+        return {
+          currentScenario: {
+            ...state.currentScenario,
+            actions: state.currentScenario.actions.map(a =>
+              a.id === state.activeActionId
+                ? { ...a, considerations: a.considerations.filter(c => c.id !== id) }
+                : a
+            ),
+          },
+          isDirty: true,
+        };
+      }),
+
+      updateConsiderationInput: (id, value) => set((state) => {
+        if (!state.currentScenario) return {};
+        return {
+          currentScenario: {
+            ...state.currentScenario,
+            actions: state.currentScenario.actions.map(a => ({
+              ...a,
+              considerations: a.considerations.map(c =>
+                c.id === id ? { ...c, inputValue: value } : c
+              ),
+            })),
+          },
+          isDirty: true,
+        };
+      }),
+
+      updateConsiderationCurve: (id, curve) => set((state) => {
+        if (!state.currentScenario) return {};
+        return {
+          currentScenario: {
+            ...state.currentScenario,
+            actions: state.currentScenario.actions.map(a => ({
+              ...a,
+              considerations: a.considerations.map(c =>
+                c.id === id ? { ...c, curve } : c
+              ),
+            })),
+          },
+          isDirty: true,
+        };
+      }),
+
+      // Library config
       updateLibraryConfig: (config) => set((state) => ({
         libraryConfig: { ...state.libraryConfig, ...config },
       })),
-
-      resetCurrentCurve: () => set({
-        currentCurve: createDefaultCurve('New Curve'),
-        testInput: 0.5,
-      }),
     }),
     {
       name: 'iaus-storage',
       partialize: (state) => ({
         savedCurves: state.savedCurves,
         libraryConfig: state.libraryConfig,
-        actions: state.actions,
+        scenarios: state.scenarios,
+        currentScenario: state.currentScenario,
+        activeActionId: state.activeActionId,
       }),
     }
   )

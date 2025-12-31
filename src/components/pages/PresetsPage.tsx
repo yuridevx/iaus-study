@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageContainer } from '../layout/PageContainer';
 import { useIAUSStore } from '../../stores/iausStore';
-import type { CurveType, Consideration } from '../../lib/types';
+import type { CurveType } from '../../lib/types';
 import { curveNames, generateCurvePoints } from '../../lib/curves';
 import { defaultParams } from '../../lib/types';
 import { presetScenarios } from '../../lib/presets';
@@ -51,11 +51,9 @@ const CurvePreview = ({ type, onClick }: CurvePreviewProps) => {
   );
 };
 
-const generateId = () => Math.random().toString(36).substring(2, 9);
-
 export const PresetsPage = () => {
   const navigate = useNavigate();
-  const { setCurrentCurve, setConsiderations } = useIAUSStore();
+  const { setCurrentCurve, importPreset } = useIAUSStore();
 
   const handleSelectCurve = (type: CurveType) => {
     setCurrentCurve({
@@ -68,22 +66,19 @@ export const PresetsPage = () => {
     navigate('/');
   };
 
-  const handleLoadScenarioAction = (considerations: Consideration[]) => {
-    // Clone with new IDs to avoid conflicts
-    const clonedConsiderations = considerations.map((c) => ({
-      ...c,
-      id: generateId(),
-      curve: { ...c.curve, id: generateId() },
-    }));
-    setConsiderations(clonedConsiderations);
-    navigate('/multi');
+  const handleLoadScenario = (scenarioId: string) => {
+    const scenario = presetScenarios.find(s => s.id === scenarioId);
+    if (scenario) {
+      importPreset(scenario);
+      navigate('/multi');
+    }
   };
 
   return (
     <PageContainer>
       <div className="space-y-6">
         <div>
-          <h2 className="text-sm font-medium text-slate-500 mb-4">Curve Types</h2>
+          <h2 className="text-sm font-medium text-slate-500 mb-4">Curves</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {curveTypes.map((type) => (
               <CurvePreview
@@ -101,22 +96,28 @@ export const PresetsPage = () => {
           <div className="space-y-4">
             {presetScenarios.map((scenario) => (
               <div key={scenario.id} className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-                <div className="font-medium text-slate-700 mb-1">{scenario.name}</div>
-                <div className="text-xs text-slate-500 mb-4">{scenario.description}</div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="font-medium text-slate-700 mb-1">{scenario.name}</div>
+                    <div className="text-xs text-slate-500 mb-3">{scenario.description}</div>
+                  </div>
+                  <button
+                    onClick={() => handleLoadScenario(scenario.id)}
+                    className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    ↓ Import
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
                   {scenario.actions.map((action) => (
                     <div
                       key={action.id}
-                      onClick={() => handleLoadScenarioAction(action.considerations)}
-                      className="bg-slate-50 rounded-lg p-3 cursor-pointer hover:bg-blue-50 hover:border-blue-200 border border-slate-200 transition-all"
+                      className="bg-slate-50 rounded-lg px-3 py-2 border border-slate-200"
                     >
-                      <div className="text-sm font-medium text-slate-700 mb-1">{action.name}</div>
-                      <div className="text-xs text-slate-500">
-                        {action.considerations.length} consideration{action.considerations.length !== 1 ? 's' : ''}
-                      </div>
-                      <div className="flex flex-wrap gap-1 mt-2">
+                      <div className="text-sm font-medium text-slate-700">{action.name}</div>
+                      <div className="flex flex-wrap gap-1 mt-1">
                         {action.considerations.map((c) => (
-                          <span key={c.id} className="text-xs bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                          <span key={c.id} className="text-xs text-slate-500">
                             {c.curve.name}
                           </span>
                         ))}

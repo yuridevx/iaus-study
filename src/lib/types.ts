@@ -95,7 +95,16 @@ export interface LibraryConfig {
   includeInterface: boolean;
 }
 
-// Preset scenario
+// Saved scenario (user-created)
+export interface Scenario {
+  id: string;
+  name: string;
+  actions: Action[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Preset scenario (read-only template)
 export interface PresetScenario {
   id: string;
   name: string;

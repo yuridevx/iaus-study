@@ -18,10 +18,9 @@ import { AllActionsHeatmap } from '../graphs/AllActionsHeatmap';
 import { WinnerSweepGraph } from '../graphs/WinnerSweepGraph';
 import { DecisionMap2D } from '../graphs/DecisionMap2D';
 import { SensitivityGraph } from '../graphs/SensitivityGraph';
-import type { Action, Consideration, CurveConfig } from '../../lib/types';
+import type { Consideration, CurveConfig } from '../../lib/types';
 import { evaluateCurve } from '../../lib/curves';
 import { applyCompensation } from '../../lib/compensation';
-import { presetScenarios } from '../../lib/presets';
 import { useIAUSStore } from '../../stores/iausStore';
 
 const calculateActionScore = (considerations: Consideration[]): { raw: number; comp: number } => {
@@ -73,95 +72,35 @@ const MiniCurvePreview = ({ curve }: { curve: CurveConfig }) => {
 export const SimulatorPage = () => {
   const navigate = useNavigate();
   const {
-    actions,
-    considerations: multiPageConsiderations,
-    savedCurves,
-    addAction,
-    removeAction,
-    updateActionName,
-    addConsiderationToAction,
-    removeConsiderationFromAction,
-    updateActionConsiderationInput,
-    loadScenario,
-    resetScenario,
+    currentScenario,
+    updateConsiderationInput,
     setCurrentCurve,
   } = useIAUSStore();
 
-  // Editing states
-  const [editingActionId, setEditingActionId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
-  const [showAddCurveFor, setShowAddCurveFor] = useState<string | null>(null);
-
-  // Create synthetic "Multi Page" action from multi page considerations
-  const multiPageAction: Action | null = multiPageConsiderations.length > 0
-    ? {
-        id: 'multi-page-sync',
-        name: 'Multi Page',
-        considerations: multiPageConsiderations,
-      }
-    : null;
-
-  // Combine store actions with multi page action
-  const allActions = useMemo(() => {
-    const result = [...actions];
-    if (multiPageAction) result.push(multiPageAction);
-    return result;
-  }, [actions, multiPageAction]);
+  const actions = currentScenario?.actions || [];
 
   // Graph selection state
-  const [sweepActionId, setSweepActionId] = useState<string>(allActions[0]?.id || '');
+  const [sweepActionId, setSweepActionId] = useState<string>(actions[0]?.id || '');
   const [sweepConsiderationIdx, setSweepConsiderationIdx] = useState(0);
-  const [map2dXActionId, setMap2dXActionId] = useState<string>(allActions[0]?.id || '');
+  const [map2dXActionId, setMap2dXActionId] = useState<string>(actions[0]?.id || '');
   const [map2dXConsiderationIdx, setMap2dXConsiderationIdx] = useState(0);
-  const [map2dYActionId, setMap2dYActionId] = useState<string>(allActions[0]?.id || '');
+  const [map2dYActionId, setMap2dYActionId] = useState<string>(actions[0]?.id || '');
   const [map2dYConsiderationIdx, setMap2dYConsiderationIdx] = useState(
-    allActions[0]?.considerations.length > 1 ? 1 : 0
+    actions[0]?.considerations.length > 1 ? 1 : 0
   );
-
-  const handleUpdateInput = (actionId: string, considerationId: string, value: number) => {
-    if (actionId === 'multi-page-sync') {
-      // Multi page uses different store method
-      useIAUSStore.getState().updateConsiderationInput(considerationId, value);
-    } else {
-      updateActionConsiderationInput(actionId, considerationId, value);
-    }
-  };
 
   const handleEditCurve = (actionId: string, consideration: Consideration) => {
     setCurrentCurve({ ...consideration.curve });
     navigate(`/?returnTo=simulator&actionId=${actionId}&considerationId=${consideration.id}`);
   };
 
-  const handleStartEditName = (action: Action) => {
-    setEditingActionId(action.id);
-    setEditingName(action.name);
-  };
-
-  const handleFinishEditName = () => {
-    if (editingActionId && editingName.trim()) {
-      updateActionName(editingActionId, editingName.trim());
-    }
-    setEditingActionId(null);
-    setEditingName('');
-  };
-
-  const handleAddAction = () => {
-    const name = `Action ${actions.length + 1}`;
-    addAction(name);
-  };
-
-  const handleAddCurveFromLibrary = (actionId: string, curve: CurveConfig) => {
-    addConsiderationToAction(actionId, curve);
-    setShowAddCurveFor(null);
-  };
-
   const scores = useMemo(() =>
-    allActions.map(a => ({
+    actions.map(a => ({
       name: a.name,
       id: a.id,
       ...calculateActionScore(a.considerations),
     })),
-    [allActions]
+    [actions]
   );
 
   const winner = useMemo(() => {
@@ -176,143 +115,66 @@ export const SimulatorPage = () => {
     return winnerName;
   }, [scores]);
 
-  const winnerAction = allActions.find(a => a.name === winner);
+  const winnerAction = actions.find(a => a.name === winner);
 
-  const sweepAction = allActions.find(a => a.id === sweepActionId);
+  const sweepAction = actions.find(a => a.id === sweepActionId);
   const currentSweepValue = sweepAction?.considerations[sweepConsiderationIdx]?.inputValue ?? 0.5;
 
-  const isMultiPageAction = (actionId: string) => actionId === 'multi-page-sync';
+  // Empty state
+  if (!currentScenario || actions.length === 0) {
+    return (
+      <PageContainer>
+        <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500">
+          <div className="text-lg mb-4">No scenario to simulate</div>
+          <button
+            onClick={() => navigate('/multi')}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Create scenario in Multi
+          </button>
+        </div>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer>
       <div className="space-y-6">
-        {/* Toolbar */}
-        <div className="flex items-center gap-2">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-medium text-slate-700">{currentScenario.name}</h2>
+            <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">
+              {actions.length} actions
+            </span>
+          </div>
           <button
-            onClick={handleAddAction}
-            className="p-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600"
-            title="Add Action"
+            onClick={() => navigate('/multi')}
+            className="px-3 py-1.5 text-sm border border-slate-300 rounded hover:bg-slate-50"
           >
-            +
-          </button>
-          <select
-            onChange={(e) => {
-              const scenario = presetScenarios.find(s => s.id === e.target.value);
-              if (scenario) loadScenario(scenario);
-              e.target.value = '';
-            }}
-            className="px-2 py-1.5 text-sm border border-slate-300 rounded"
-            defaultValue=""
-          >
-            <option value="">Presets</option>
-            {presetScenarios.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-          <button
-            onClick={resetScenario}
-            className="p-2 text-sm border border-slate-300 rounded hover:bg-slate-50"
-            title="Reset"
-          >
-            ↺
+            ✎ Edit
           </button>
         </div>
 
         {/* Row 1: Scenario Inputs */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-          <h2 className="text-sm font-medium text-slate-500 mb-3">Scenario Inputs</h2>
+          <h2 className="text-sm font-medium text-slate-500 mb-3">Inputs</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {allActions.map((action) => {
-              const isMulti = isMultiPageAction(action.id);
+            {actions.map((action) => {
               const isWinner = winner === action.name;
 
               return (
                 <div
                   key={action.id}
                   className={`rounded-lg border p-3 ${
-                    isWinner ? 'border-green-500 bg-green-50' :
-                    isMulti ? 'border-purple-300 bg-purple-50' :
-                    'border-slate-200 bg-slate-50'
+                    isWinner ? 'border-green-500 bg-green-50' : 'border-slate-200 bg-slate-50'
                   }`}
                 >
                   {/* Action Header */}
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1">
-                      {editingActionId === action.id ? (
-                        <input
-                          type="text"
-                          value={editingName}
-                          onChange={(e) => setEditingName(e.target.value)}
-                          onBlur={handleFinishEditName}
-                          onKeyDown={(e) => e.key === 'Enter' && handleFinishEditName()}
-                          className="text-sm font-medium px-1 border rounded w-24"
-                          autoFocus
-                        />
-                      ) : (
-                        <span className="text-sm font-medium text-slate-700">{action.name}</span>
-                      )}
-                      {isMulti && (
-                        <span className="text-xs text-purple-600">(live)</span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {isWinner && (
-                        <span className="text-xs text-green-600 font-medium mr-1">✓</span>
-                      )}
-                      {!isMulti && (
-                        <>
-                          <button
-                            onClick={() => handleStartEditName(action)}
-                            className="p-1 text-xs text-slate-400 hover:text-slate-600"
-                            title="Edit name"
-                          >
-                            ✎
-                          </button>
-                          <button
-                            onClick={() => removeAction(action.id)}
-                            className="p-1 text-xs text-slate-400 hover:text-red-500"
-                            title="Remove action"
-                          >
-                            ×
-                          </button>
-                          <button
-                            onClick={() => setShowAddCurveFor(showAddCurveFor === action.id ? null : action.id)}
-                            className="p-1 text-xs text-slate-400 hover:text-blue-500"
-                            title="Add consideration"
-                          >
-                            +
-                          </button>
-                        </>
-                      )}
-                    </div>
+                    <span className="text-sm font-medium text-slate-700">{action.name}</span>
+                    {isWinner && <span className="text-xs text-green-600 font-medium">✓</span>}
                   </div>
-
-                  {/* Add curve dropdown */}
-                  {showAddCurveFor === action.id && (
-                    <div className="mb-2 flex gap-1">
-                      <button
-                        onClick={() => addConsiderationToAction(action.id)}
-                        className="flex-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                      >
-                        New
-                      </button>
-                      {savedCurves.length > 0 && (
-                        <select
-                          onChange={(e) => {
-                            const curve = savedCurves.find(c => c.id === e.target.value);
-                            if (curve) handleAddCurveFromLibrary(action.id, curve);
-                          }}
-                          className="flex-1 px-2 py-1 text-xs border rounded"
-                          defaultValue=""
-                        >
-                          <option value="">From Library</option>
-                          {savedCurves.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                  )}
 
                   {/* Considerations */}
                   <div className="space-y-1.5">
@@ -328,22 +190,13 @@ export const SimulatorPage = () => {
                           >
                             {c.curve.name}
                           </button>
-                          {!isMulti && (
-                            <button
-                              onClick={() => removeConsiderationFromAction(action.id, c.id)}
-                              className="text-xs text-slate-300 hover:text-red-500"
-                              title="Remove"
-                            >
-                              ×
-                            </button>
-                          )}
                           <input
                             type="range"
                             min={0}
                             max={1}
                             step={0.01}
                             value={c.inputValue}
-                            onChange={(e) => handleUpdateInput(action.id, c.id, parseFloat(e.target.value))}
+                            onChange={(e) => updateConsiderationInput(c.id, parseFloat(e.target.value))}
                             className="flex-1 h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-blue-500"
                           />
                           <span className="text-xs font-mono text-slate-600 w-8">{output.toFixed(2)}</span>
@@ -364,7 +217,7 @@ export const SimulatorPage = () => {
         {/* Row 2: Action Scores + Winner Breakdown */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-            <h3 className="text-sm font-medium text-slate-500 mb-3">Action Scores</h3>
+            <h3 className="text-sm font-medium text-slate-500 mb-3">Scores</h3>
             <div className="h-52">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={scores} layout="vertical" margin={{ left: 60, right: 20 }}>
@@ -388,7 +241,7 @@ export const SimulatorPage = () => {
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-            <h3 className="text-sm font-medium text-slate-500 mb-3">Winner Breakdown</h3>
+            <h3 className="text-sm font-medium text-slate-500 mb-3">Winner</h3>
             {winnerAction ? (
               <BreakdownGraph action={winnerAction} />
             ) : (
@@ -400,13 +253,13 @@ export const SimulatorPage = () => {
         {/* Row 3: All Actions Heatmap + Sensitivity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-            <h3 className="text-sm font-medium text-slate-500 mb-3">All Actions Breakdown</h3>
-            <AllActionsHeatmap actions={allActions} winner={winner} />
+            <h3 className="text-sm font-medium text-slate-500 mb-3">Breakdown</h3>
+            <AllActionsHeatmap actions={actions} winner={winner} />
           </div>
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
-            <h3 className="text-sm font-medium text-slate-500 mb-3">Sensitivity Analysis</h3>
-            <SensitivityGraph actions={allActions} winner={winner} />
+            <h3 className="text-sm font-medium text-slate-500 mb-3">Sensitivity</h3>
+            <SensitivityGraph actions={actions} winner={winner} />
           </div>
         </div>
 
@@ -414,7 +267,7 @@ export const SimulatorPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-slate-500">Winner Over Input Range</h3>
+              <h3 className="text-sm font-medium text-slate-500">Sweep</h3>
               <select
                 value={`${sweepActionId}:${sweepConsiderationIdx}`}
                 onChange={(e) => {
@@ -424,7 +277,7 @@ export const SimulatorPage = () => {
                 }}
                 className="text-xs border border-slate-200 rounded px-2 py-1"
               >
-                {allActions.flatMap((a) =>
+                {actions.flatMap((a) =>
                   a.considerations.map((c, idx) => (
                     <option key={`${a.id}:${idx}`} value={`${a.id}:${idx}`}>
                       {a.name} - {c.curve.name}
@@ -434,7 +287,7 @@ export const SimulatorPage = () => {
               </select>
             </div>
             <WinnerSweepGraph
-              actions={allActions}
+              actions={actions}
               sweepActionId={sweepActionId}
               sweepConsiderationIdx={sweepConsiderationIdx}
               currentValue={currentSweepValue}
@@ -443,7 +296,7 @@ export const SimulatorPage = () => {
 
           <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-slate-500">2D Decision Map</h3>
+              <h3 className="text-sm font-medium text-slate-500">2D Map</h3>
               <div className="flex gap-2 text-xs">
                 <label className="flex items-center gap-1">
                   X:
@@ -456,7 +309,7 @@ export const SimulatorPage = () => {
                     }}
                     className="border border-slate-200 rounded px-1 py-0.5"
                   >
-                    {allActions.flatMap((a) =>
+                    {actions.flatMap((a) =>
                       a.considerations.map((c, idx) => (
                         <option key={`${a.id}:${idx}`} value={`${a.id}:${idx}`}>
                           {c.curve.name}
@@ -476,7 +329,7 @@ export const SimulatorPage = () => {
                     }}
                     className="border border-slate-200 rounded px-1 py-0.5"
                   >
-                    {allActions.flatMap((a) =>
+                    {actions.flatMap((a) =>
                       a.considerations.map((c, idx) => (
                         <option key={`${a.id}:${idx}`} value={`${a.id}:${idx}`}>
                           {c.curve.name}
@@ -488,7 +341,7 @@ export const SimulatorPage = () => {
               </div>
             </div>
             <DecisionMap2D
-              actions={allActions}
+              actions={actions}
               xActionId={map2dXActionId}
               xConsiderationIdx={map2dXConsiderationIdx}
               yActionId={map2dYActionId}
